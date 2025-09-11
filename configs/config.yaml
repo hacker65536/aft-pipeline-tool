@@ -1,0 +1,31 @@
+# AFT Pipeline Tool Configuration
+
+cache:
+  directory: ~/.aft-pipeline-tool/cache
+  accounts_ttl: 3600        # 1 hour
+  pipelines_ttl: 1800       # 30 minutes
+  pipeline_details_ttl: 900 # 15 minutes
+
+exclude_accounts:
+  - "111111111111"  # Management Account
+  - "222222222222"  # Log Archive Account
+  - "333333333333"  # Audit Account
+
+# AWS configuration (optional)
+# If not specified, the tool will use the current environment settings
+# (environment variables, shared config files, IAM roles, etc.)
+aws:
+  # region: us-east-1     # Optional: specify AWS region
+  # profile: default      # Optional: specify AWS profile
+
+output:
+  format: table  # table, json, csv
+  color: true
+
+batch_update:
+  dry_run: true
+  target_accounts: []
+  settings:
+    branch: main
+    trigger_enabled: true
+    polling_enabled: false
