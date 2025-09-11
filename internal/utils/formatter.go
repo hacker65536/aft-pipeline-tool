@@ -8,7 +8,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"aft-pipeline-tool/internal/models"
+	"github.com/hacker65536/aft-pipeline-tool/internal/models"
 )
 
 // Formatter handles different output formats
@@ -49,7 +49,13 @@ func (f *Formatter) FormatPipelines(pipelines []models.Pipeline, w io.Writer) er
 // formatTable formats pipelines as a table
 func (f *Formatter) formatTable(pipelines []models.Pipeline, w io.Writer) error {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	defer tw.Flush()
+	defer func() {
+		if err := tw.Flush(); err != nil {
+			// Log the error but don't fail the operation
+			// as this is typically not critical
+			_ = err // Explicitly ignore the error
+		}
+	}()
 
 	// state情報があるかチェック（withStateフラグまたは既存のstate情報）
 	hasStateInfo := f.withState
@@ -66,20 +72,36 @@ func (f *Formatter) formatTable(pipelines []models.Pipeline, w io.Writer) error 
 	if f.showDetails {
 		// 詳細表示モード：すべての項目を表示
 		if hasStateInfo {
-			fmt.Fprintln(tw, "ACCOUNT ID\tACCOUNT NAME\tPIPELINE NAME\tPIPELINE TYPE\tTRIGGER\tSTATE\tLAST UPDATED\tLATEST STAGE UPDATE")
-			fmt.Fprintln(tw, "----------\t------------\t-------------\t-------------\t-------\t-----\t------------\t-------------------")
+			if _, err := fmt.Fprintln(tw, "ACCOUNT ID\tACCOUNT NAME\tPIPELINE NAME\tPIPELINE TYPE\tTRIGGER\tSTATE\tLAST UPDATED\tLATEST STAGE UPDATE"); err != nil {
+				return err
+			}
+			if _, err := fmt.Fprintln(tw, "----------\t------------\t-------------\t-------------\t-------\t-----\t------------\t-------------------"); err != nil {
+				return err
+			}
 		} else {
-			fmt.Fprintln(tw, "ACCOUNT ID\tACCOUNT NAME\tPIPELINE NAME\tPIPELINE TYPE\tTRIGGER\tLAST UPDATED")
-			fmt.Fprintln(tw, "----------\t------------\t-------------\t-------------\t-------\t------------")
+			if _, err := fmt.Fprintln(tw, "ACCOUNT ID\tACCOUNT NAME\tPIPELINE NAME\tPIPELINE TYPE\tTRIGGER\tLAST UPDATED"); err != nil {
+				return err
+			}
+			if _, err := fmt.Fprintln(tw, "----------\t------------\t-------------\t-------------\t-------\t------------"); err != nil {
+				return err
+			}
 		}
 	} else {
 		// シンプル表示モード：ACCOUNT NAMEとPIPELINE NAMEのみ
 		if hasStateInfo {
-			fmt.Fprintln(tw, "ACCOUNT NAME\tPIPELINE NAME\tSTATE\tLATEST STAGE UPDATE")
-			fmt.Fprintln(tw, "------------\t-------------\t-----\t-------------------")
+			if _, err := fmt.Fprintln(tw, "ACCOUNT NAME\tPIPELINE NAME\tSTATE\tLATEST STAGE UPDATE"); err != nil {
+				return err
+			}
+			if _, err := fmt.Fprintln(tw, "------------\t-------------\t-----\t-------------------"); err != nil {
+				return err
+			}
 		} else {
-			fmt.Fprintln(tw, "ACCOUNT NAME\tPIPELINE NAME")
-			fmt.Fprintln(tw, "------------\t-------------")
+			if _, err := fmt.Fprintln(tw, "ACCOUNT NAME\tPIPELINE NAME"); err != nil {
+				return err
+			}
+			if _, err := fmt.Fprintln(tw, "------------\t-------------"); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -93,7 +115,7 @@ func (f *Formatter) formatTable(pipelines []models.Pipeline, w io.Writer) error 
 			if hasStateInfo {
 				stateInfo := getPipelineStateInfo(pipeline)
 				latestStageUpdate := getLatestStageUpdateTime(pipeline)
-				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+				if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 					pipeline.AccountID,
 					pipeline.AccountName,
 					pipeline.GetName(),
@@ -102,33 +124,41 @@ func (f *Formatter) formatTable(pipelines []models.Pipeline, w io.Writer) error 
 					stateInfo,
 					pipeline.GetUpdated().Format("2006-01-02 15:04"),
 					latestStageUpdate,
-				)
+				); err != nil {
+					return err
+				}
 			} else {
-				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
+				if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
 					pipeline.AccountID,
 					pipeline.AccountName,
 					pipeline.GetName(),
 					pipelineType,
 					triggerDetails,
 					pipeline.GetUpdated().Format("2006-01-02 15:04"),
-				)
+				); err != nil {
+					return err
+				}
 			}
 		} else {
 			// シンプル表示モード
 			if hasStateInfo {
 				stateInfo := getPipelineStateInfo(pipeline)
 				latestStageUpdate := getLatestStageUpdateTime(pipeline)
-				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n",
+				if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n",
 					pipeline.AccountName,
 					pipeline.GetName(),
 					stateInfo,
 					latestStageUpdate,
-				)
+				); err != nil {
+					return err
+				}
 			} else {
-				fmt.Fprintf(tw, "%s\t%s\n",
+				if _, err := fmt.Fprintf(tw, "%s\t%s\n",
 					pipeline.AccountName,
 					pipeline.GetName(),
-				)
+				); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -175,20 +205,6 @@ func (f *Formatter) formatCSV(pipelines []models.Pipeline, w io.Writer) error {
 	}
 
 	return nil
-}
-
-// getTriggerStatus returns a human-readable trigger status
-func getTriggerStatus(triggerType models.TriggerType) string {
-	switch triggerType {
-	case models.TriggerTypeWebhook:
-		return "Webhook"
-	case models.TriggerTypePolling:
-		return "Polling"
-	case models.TriggerTypeNone:
-		return "None"
-	default:
-		return "Unknown"
-	}
 }
 
 // getTriggerDetails returns detailed trigger information from pipeline triggers

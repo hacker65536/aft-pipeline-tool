@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/organizations"
 	"github.com/aws/aws-sdk-go-v2/service/organizations/types"
 
-	"aft-pipeline-tool/internal/models"
+	"github.com/hacker65536/aft-pipeline-tool/internal/models"
 )
 
 // ListAccounts retrieves all active AWS accounts from Organizations

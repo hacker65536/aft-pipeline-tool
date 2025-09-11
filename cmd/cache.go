@@ -5,8 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"aft-pipeline-tool/internal/cache"
-	"aft-pipeline-tool/internal/config"
+	"github.com/hacker65536/aft-pipeline-tool/internal/cache"
+	"github.com/hacker65536/aft-pipeline-tool/internal/config"
 )
 
 var cacheCmd = &cobra.Command{

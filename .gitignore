@@ -36,8 +36,8 @@ Thumbs.db
 # Log files
 *.log
 
-# Cache directory
-cache/
+# Cache directory (only root level)
+/cache/
 
 # Configuration files with sensitive data
 *.env

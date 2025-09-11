@@ -38,6 +38,11 @@ func GetLogger() *zap.Logger {
 // Sync flushes any buffered log entries
 func Sync() {
 	if Logger != nil {
-		Logger.Sync()
+		if err := Logger.Sync(); err != nil {
+			// Note: Logger.Sync() can return errors on some platforms (like Windows)
+			// but these are often not critical, so we just ignore them silently
+			// to avoid noise in the logs
+			_ = err // Explicitly ignore the error
+		}
 	}
 }

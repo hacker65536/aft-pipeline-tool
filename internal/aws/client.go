@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/aws/aws-sdk-go-v2/config"
-	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/codepipeline"
 	"github.com/aws/aws-sdk-go-v2/service/organizations"
 )
@@ -13,7 +12,7 @@ import (
 type Client struct {
 	Organizations *organizations.Client
 	CodePipeline  *codepipeline.Client
-	Config        awsconfig.Config
+	Config        config.Config
 }
 
 // NewClient creates a new AWS client with the specified region and profile

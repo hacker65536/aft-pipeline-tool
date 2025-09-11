@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/codepipeline"
 	"github.com/aws/aws-sdk-go-v2/service/codepipeline/types"
 
-	"aft-pipeline-tool/internal/models"
+	"github.com/hacker65536/aft-pipeline-tool/internal/models"
 )
 
 // ListAFTPipelines retrieves AFT pipelines for the given accounts
@@ -251,36 +251,6 @@ func extractAccountIDFromPipelineName(pipelineName string) string {
 		return parts[0]
 	}
 	return ""
-}
-
-// parseSourceAction parses source action configuration
-// Note: This function is deprecated in favor of V2 pipeline triggers.
-// Trigger type determination should be done using the Pipeline.determineTriggerTypeV2() method.
-func parseSourceAction(action types.ActionDeclaration) models.Source {
-	source := models.Source{
-		Configuration: make(map[string]interface{}),
-	}
-
-	if action.ActionTypeId != nil {
-		source.Provider = *action.ActionTypeId.Provider
-	}
-
-	for key, value := range action.Configuration {
-		source.Configuration[key] = value
-
-		switch key {
-		case "Branch", "BranchName":
-			source.Branch = value
-		case "Repo", "RepositoryName":
-			source.Repository = value
-		}
-	}
-
-	// Trigger type determination is now handled by V2 pipeline triggers
-	// This legacy logic is kept for backward compatibility but should not be used
-	source.TriggerType = models.TriggerTypeNone
-
-	return source
 }
 
 // UpdatePipelineTriggersV2 updates the V2 pipeline triggers

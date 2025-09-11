@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"aft-pipeline-tool/internal/aws"
-	"aft-pipeline-tool/internal/cache"
-	"aft-pipeline-tool/internal/config"
-	"aft-pipeline-tool/internal/logger"
-	"aft-pipeline-tool/internal/models"
+	"github.com/hacker65536/aft-pipeline-tool/internal/aws"
+	"github.com/hacker65536/aft-pipeline-tool/internal/cache"
+	"github.com/hacker65536/aft-pipeline-tool/internal/config"
+	"github.com/hacker65536/aft-pipeline-tool/internal/logger"
+	"github.com/hacker65536/aft-pipeline-tool/internal/models"
 
 	"github.com/aws/aws-sdk-go-v2/service/codepipeline"
 	"go.uber.org/zap"

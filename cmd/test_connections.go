@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"aft-pipeline-tool/internal/models"
+	"github.com/hacker65536/aft-pipeline-tool/internal/models"
 )
 
 var testConnectionsCmd = &cobra.Command{
@@ -32,7 +32,9 @@ func init() {
 	testConnectionsCmd.Flags().StringVar(&testSourceActionName, "source-action", "", "Specific source action name to test (optional)")
 
 	// Mark connection-arn as required
-	testConnectionsCmd.MarkFlagRequired("connection-arn")
+	if err := testConnectionsCmd.MarkFlagRequired("connection-arn"); err != nil {
+		fmt.Printf("Error marking connection-arn flag as required: %v\n", err)
+	}
 }
 
 func runTestConnections(cmd *cobra.Command, args []string) error {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"aft-pipeline-tool/internal/models"
+	"github.com/hacker65536/aft-pipeline-tool/internal/models"
 )
 
 var testTriggersCmd = &cobra.Command{

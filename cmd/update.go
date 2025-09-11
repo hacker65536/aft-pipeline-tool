@@ -6,11 +6,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"aft-pipeline-tool/internal/aws"
-	"aft-pipeline-tool/internal/cache"
-	"aft-pipeline-tool/internal/config"
-	"aft-pipeline-tool/internal/models"
-	"aft-pipeline-tool/pkg/aft"
+	"github.com/hacker65536/aft-pipeline-tool/internal/aws"
+	"github.com/hacker65536/aft-pipeline-tool/internal/cache"
+	"github.com/hacker65536/aft-pipeline-tool/internal/config"
+	"github.com/hacker65536/aft-pipeline-tool/internal/models"
+	"github.com/hacker65536/aft-pipeline-tool/pkg/aft"
 )
 
 var updateCmd = &cobra.Command{
@@ -37,7 +37,9 @@ func init() {
 	updateCmd.Flags().BoolVar(&updatePolling, "polling", false, "Enable polling for source changes")
 	updateCmd.Flags().BoolVar(&updateDryRun, "dry-run", false, "Show what would be changed without making actual changes")
 
-	updateCmd.MarkFlagRequired("pipeline")
+	if err := updateCmd.MarkFlagRequired("pipeline"); err != nil {
+		fmt.Printf("Error marking pipeline flag as required: %v\n", err)
+	}
 }
 
 func runUpdate(cmd *cobra.Command, args []string) error {

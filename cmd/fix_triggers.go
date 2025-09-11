@@ -8,12 +8,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"aft-pipeline-tool/internal/aws"
-	"aft-pipeline-tool/internal/cache"
-	"aft-pipeline-tool/internal/config"
-	"aft-pipeline-tool/internal/models"
-	"aft-pipeline-tool/internal/utils"
-	"aft-pipeline-tool/pkg/aft"
+	"github.com/hacker65536/aft-pipeline-tool/internal/aws"
+	"github.com/hacker65536/aft-pipeline-tool/internal/cache"
+	"github.com/hacker65536/aft-pipeline-tool/internal/config"
+	"github.com/hacker65536/aft-pipeline-tool/internal/models"
+	"github.com/hacker65536/aft-pipeline-tool/internal/utils"
+	"github.com/hacker65536/aft-pipeline-tool/pkg/aft"
 )
 
 var fixTriggersCmd = &cobra.Command{
@@ -136,10 +136,6 @@ func processAllPipelines(ctx context.Context, manager *aft.Manager, awsClient *a
 
 	fmt.Println("\nAll pipelines processed successfully")
 	return nil
-}
-
-func fixPipelineTriggers(ctx context.Context, awsClient *aws.Client, pipeline *models.Pipeline, dryRun bool) error {
-	return fixPipelineTriggersWithCache(ctx, awsClient, pipeline, dryRun, nil)
 }
 
 func fixPipelineTriggersWithCache(ctx context.Context, awsClient *aws.Client, pipeline *models.Pipeline, dryRun bool, fileCache *cache.FileCache) error {
@@ -490,23 +486,6 @@ func printTriggerDetailsColored(trigger models.Trigger, indent, color string) {
 			}
 			if push.FilePaths != nil && len(push.FilePaths.Includes) > 0 {
 				fmt.Printf("%s%s\n", indent, utils.Colorize(color, fmt.Sprintf("File Paths: %v", push.FilePaths.Includes)))
-			}
-		}
-	}
-}
-
-// printTriggerDetails prints the details of a trigger with the given indent
-func printTriggerDetails(trigger models.Trigger, indent string) {
-	fmt.Printf("%sProvider: %s\n", indent, trigger.ProviderType)
-	if trigger.GitConfiguration != nil {
-		fmt.Printf("%sSource Action: %s\n", indent, trigger.GitConfiguration.SourceActionName)
-		if len(trigger.GitConfiguration.Push) > 0 {
-			push := trigger.GitConfiguration.Push[0]
-			if push.Branches != nil && len(push.Branches.Includes) > 0 {
-				fmt.Printf("%sBranches: %v\n", indent, push.Branches.Includes)
-			}
-			if push.FilePaths != nil && len(push.FilePaths.Includes) > 0 {
-				fmt.Printf("%sFile Paths: %v\n", indent, push.FilePaths.Includes)
 			}
 		}
 	}

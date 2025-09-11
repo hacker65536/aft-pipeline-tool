@@ -8,12 +8,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"aft-pipeline-tool/internal/aws"
-	"aft-pipeline-tool/internal/cache"
-	"aft-pipeline-tool/internal/config"
-	"aft-pipeline-tool/internal/models"
-	"aft-pipeline-tool/internal/utils"
-	"aft-pipeline-tool/pkg/aft"
+	"github.com/hacker65536/aft-pipeline-tool/internal/aws"
+	"github.com/hacker65536/aft-pipeline-tool/internal/cache"
+	"github.com/hacker65536/aft-pipeline-tool/internal/config"
+	"github.com/hacker65536/aft-pipeline-tool/internal/models"
+	"github.com/hacker65536/aft-pipeline-tool/internal/utils"
+	"github.com/hacker65536/aft-pipeline-tool/pkg/aft"
 )
 
 var fixPipelineTypeCmd = &cobra.Command{
@@ -39,7 +39,9 @@ func init() {
 	fixPipelineTypeCmd.Flags().StringVar(&newPipelineType, "pipeline-type", "", "New PipelineType to set (V1 or V2)")
 
 	// Mark pipeline-type as required
-	fixPipelineTypeCmd.MarkFlagRequired("pipeline-type")
+	if err := fixPipelineTypeCmd.MarkFlagRequired("pipeline-type"); err != nil {
+		fmt.Printf("Error marking pipeline-type flag as required: %v\n", err)
+	}
 }
 
 func runFixPipelineType(cmd *cobra.Command, args []string) error {
@@ -137,10 +139,6 @@ func processAllPipelinesType(ctx context.Context, manager *aft.Manager, awsClien
 
 	fmt.Println("\nAll pipelines processed successfully")
 	return nil
-}
-
-func fixPipelineTypeConfiguration(ctx context.Context, awsClient *aws.Client, pipeline *models.Pipeline, dryRun bool) error {
-	return fixPipelineTypeConfigurationWithCache(ctx, awsClient, pipeline, dryRun, nil)
 }
 
 func fixPipelineTypeConfigurationWithCache(ctx context.Context, awsClient *aws.Client, pipeline *models.Pipeline, dryRun bool, fileCache *cache.FileCache) error {

@@ -4,8 +4,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"aft-pipeline-tool/internal/logger"
-	"aft-pipeline-tool/internal/models"
+	"github.com/hacker65536/aft-pipeline-tool/internal/logger"
+	"github.com/hacker65536/aft-pipeline-tool/internal/models"
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap"

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"aft-pipeline-tool/internal/models"
+	"github.com/hacker65536/aft-pipeline-tool/internal/models"
 )
 
 func TestSortPipelinesByLatestStageUpdate(t *testing.T) {

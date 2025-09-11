@@ -8,12 +8,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"aft-pipeline-tool/internal/aws"
-	"aft-pipeline-tool/internal/cache"
-	"aft-pipeline-tool/internal/config"
-	"aft-pipeline-tool/internal/models"
-	"aft-pipeline-tool/internal/utils"
-	"aft-pipeline-tool/pkg/aft"
+	"github.com/hacker65536/aft-pipeline-tool/internal/aws"
+	"github.com/hacker65536/aft-pipeline-tool/internal/cache"
+	"github.com/hacker65536/aft-pipeline-tool/internal/config"
+	"github.com/hacker65536/aft-pipeline-tool/internal/models"
+	"github.com/hacker65536/aft-pipeline-tool/internal/utils"
+	"github.com/hacker65536/aft-pipeline-tool/pkg/aft"
 )
 
 var fixConnectionsCmd = &cobra.Command{
@@ -40,7 +40,9 @@ func init() {
 	fixConnectionsCmd.Flags().StringVar(&sourceActionName, "source-action", "", "Specific source action name to update (if not specified, all source actions will be updated)")
 
 	// Mark connection-arn as required
-	fixConnectionsCmd.MarkFlagRequired("connection-arn")
+	if err := fixConnectionsCmd.MarkFlagRequired("connection-arn"); err != nil {
+		fmt.Printf("Error marking connection-arn flag as required: %v\n", err)
+	}
 }
 
 func runFixConnections(cmd *cobra.Command, args []string) error {
@@ -138,10 +140,6 @@ func processAllPipelinesConnections(ctx context.Context, manager *aft.Manager, a
 
 	fmt.Println("\nAll pipelines processed successfully")
 	return nil
-}
-
-func fixPipelineConnections(ctx context.Context, awsClient *aws.Client, pipeline *models.Pipeline, dryRun bool) error {
-	return fixPipelineConnectionsWithCache(ctx, awsClient, pipeline, dryRun, nil)
 }
 
 func fixPipelineConnectionsWithCache(ctx context.Context, awsClient *aws.Client, pipeline *models.Pipeline, dryRun bool, fileCache *cache.FileCache) error {

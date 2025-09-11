@@ -8,12 +8,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"aft-pipeline-tool/internal/aws"
-	"aft-pipeline-tool/internal/cache"
-	"aft-pipeline-tool/internal/config"
-	"aft-pipeline-tool/internal/models"
-	"aft-pipeline-tool/internal/utils"
-	"aft-pipeline-tool/pkg/aft"
+	"github.com/hacker65536/aft-pipeline-tool/internal/aws"
+	"github.com/hacker65536/aft-pipeline-tool/internal/cache"
+	"github.com/hacker65536/aft-pipeline-tool/internal/config"
+	"github.com/hacker65536/aft-pipeline-tool/internal/models"
+	"github.com/hacker65536/aft-pipeline-tool/internal/utils"
+	"github.com/hacker65536/aft-pipeline-tool/pkg/aft"
 )
 
 var listCmd = &cobra.Command{
@@ -147,14 +147,6 @@ func addCachedStateIfAvailable(pipelines []models.Pipeline, fileCache *cache.Fil
 	}
 
 	return pipelines, hasAnyState
-}
-
-// getCacheStatusText returns human-readable cache status
-func getCacheStatusText(fromCache bool) string {
-	if fromCache {
-		return "Cache"
-	}
-	return "API"
 }
 
 // getCacheStatusColorText returns colored cache status text

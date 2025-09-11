@@ -7,8 +7,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"aft-pipeline-tool/internal/logger"
-	"aft-pipeline-tool/internal/utils"
+	"github.com/hacker65536/aft-pipeline-tool/internal/logger"
+	"github.com/hacker65536/aft-pipeline-tool/internal/utils"
 )
 
 var (
@@ -46,8 +46,12 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable colored output")
 
 	// Bind flags to viper
-	viper.BindPFlag("aws.region", rootCmd.PersistentFlags().Lookup("region"))
-	viper.BindPFlag("aws.profile", rootCmd.PersistentFlags().Lookup("profile"))
+	if err := viper.BindPFlag("aws.region", rootCmd.PersistentFlags().Lookup("region")); err != nil {
+		fmt.Printf("Error binding region flag: %v\n", err)
+	}
+	if err := viper.BindPFlag("aws.profile", rootCmd.PersistentFlags().Lookup("profile")); err != nil {
+		fmt.Printf("Error binding profile flag: %v\n", err)
+	}
 }
 
 // initConfig reads in config file and ENV variables if set.
