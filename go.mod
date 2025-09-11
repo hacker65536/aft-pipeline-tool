@@ -1,4 +1,4 @@
-module aft-pipeline-tool
+module github/hacker65536/aft-pipeline-tool
 
 go 1.23.0
 
