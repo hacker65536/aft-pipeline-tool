@@ -1,6 +1,6 @@
 module aft-pipeline-tool
 
-go 1.25
+go 1.23.0
 
 require (
 	github.com/aws/aws-sdk-go-v2/config v1.31.7
