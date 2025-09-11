@@ -13,10 +13,10 @@ jobs:
   govulncheck:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5.0.0
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6.0.0
       with:
         go-version: '1.24'
 
@@ -29,10 +29,10 @@ jobs:
   nancy:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5.0.0
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6.0.0
       with:
         go-version: '1.24'
 
@@ -51,10 +51,10 @@ jobs:
       GO111MODULE: on
     steps:
     - name: Checkout Source
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5.0.0
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6.0.0
       with:
         go-version: '1.24'
 
@@ -65,7 +65,7 @@ jobs:
       run: gosec -fmt sarif -out results.sarif ./...
 
     - name: Upload SARIF file
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@codeql-bundle-v2.23.0
       with:
         sarif_file: results.sarif
 
@@ -84,17 +84,17 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5.0.0
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
+      uses: github/codeql-action/init@codeql-bundle-v2.23.0
       with:
         languages: ${{ matrix.language }}
 
     - name: Autobuild
-      uses: github/codeql-action/autobuild@v3
+      uses: github/codeql-action/autobuild@codeql-bundle-v2.23.0
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+      uses: github/codeql-action/analyze@codeql-bundle-v2.23.0
       with:
         category: "/language:${{matrix.language}}"
