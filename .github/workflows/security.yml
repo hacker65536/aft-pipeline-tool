@@ -46,6 +46,10 @@ jobs:
 
   gosec:
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     env:
       GO111MODULE: on
     steps:
