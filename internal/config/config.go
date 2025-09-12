@@ -18,6 +18,7 @@ type Config struct {
 	AWS             AWSConfig         `yaml:"aws"`
 	Output          OutputConfig      `yaml:"output"`
 	BatchUpdate     BatchUpdateConfig `yaml:"batch_update"`
+	Execution       ExecutionConfig   `yaml:"execution"`
 }
 
 // CacheConfig represents cache configuration
@@ -47,6 +48,14 @@ type BatchUpdateConfig struct {
 	DryRun         bool                   `yaml:"dry_run"`
 }
 
+// ExecutionConfig represents execution configuration
+type ExecutionConfig struct {
+	MaxConcurrent int  `yaml:"max_concurrent"` // Maximum number of concurrent executions
+	MaxPipelines  int  `yaml:"max_pipelines"`  // Maximum number of pipelines to execute from file
+	Timeout       int  `yaml:"timeout"`        // Timeout in seconds for waiting
+	Sequential    bool `yaml:"sequential"`     // Execute pipelines sequentially (wait for completion before next)
+}
+
 // LoadConfig loads configuration from file and environment
 func LoadConfig() (*Config, error) {
 	// Set default values (these will be used if not specified in config file)
@@ -60,6 +69,10 @@ func LoadConfig() (*Config, error) {
 	viper.SetDefault("output.format", "table")
 	viper.SetDefault("output.color", true)
 	viper.SetDefault("batch_update.dry_run", true)
+	viper.SetDefault("execution.max_concurrent", 5)
+	viper.SetDefault("execution.max_pipelines", 100)
+	viper.SetDefault("execution.timeout", 3600)
+	viper.SetDefault("execution.sequential", false)
 
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
@@ -77,6 +90,17 @@ func LoadConfig() (*Config, error) {
 		config.Cache.PipelineDetailsTTL = viper.GetInt("cache.pipeline_details_ttl")
 	}
 
+	// Manual override for execution values if viper.Unmarshal didn't work properly
+	if config.Execution.MaxConcurrent == 0 {
+		config.Execution.MaxConcurrent = viper.GetInt("execution.max_concurrent")
+	}
+	if config.Execution.MaxPipelines == 0 {
+		config.Execution.MaxPipelines = viper.GetInt("execution.max_pipelines")
+	}
+	if config.Execution.Timeout == 0 {
+		config.Execution.Timeout = viper.GetInt("execution.timeout")
+	}
+
 	// Expand tilde in cache directory path
 	config.Cache.Directory = expandPath(config.Cache.Directory)
 
@@ -84,7 +108,10 @@ func LoadConfig() (*Config, error) {
 		zap.String("cache_directory", config.Cache.Directory),
 		zap.Int("accounts_ttl", config.Cache.AccountsTTL),
 		zap.Int("pipelines_ttl", config.Cache.PipelinesTTL),
-		zap.Int("pipeline_details_ttl", config.Cache.PipelineDetailsTTL))
+		zap.Int("pipeline_details_ttl", config.Cache.PipelineDetailsTTL),
+		zap.Int("execution_max_concurrent", config.Execution.MaxConcurrent),
+		zap.Int("execution_max_pipelines", config.Execution.MaxPipelines),
+		zap.Int("execution_timeout", config.Execution.Timeout))
 
 	return &config, nil
 }

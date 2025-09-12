@@ -167,6 +167,51 @@ type ErrorDetails struct {
 	Message string `json:"message,omitempty"`
 }
 
+// PipelineExecution represents a pipeline execution
+type PipelineExecution struct {
+	PipelineExecutionId string                      `json:"pipelineExecutionId"`
+	PipelineName        string                      `json:"pipelineName"`
+	PipelineVersion     int32                       `json:"pipelineVersion"`
+	Status              string                      `json:"status"`
+	StatusSummary       string                      `json:"statusSummary,omitempty"`
+	StartTime           *time.Time                  `json:"startTime,omitempty"`
+	LastUpdateTime      *time.Time                  `json:"lastUpdateTime,omitempty"`
+	SourceRevisions     []PipelineExecutionRevision `json:"sourceRevisions,omitempty"`
+	Trigger             *ExecutionTrigger           `json:"trigger,omitempty"`
+	StopTrigger         *StopExecutionTrigger       `json:"stopTrigger,omitempty"`
+}
+
+// PipelineExecutionRevision represents source revision information
+type PipelineExecutionRevision struct {
+	ActionName      string `json:"actionName"`
+	RevisionId      string `json:"revisionId,omitempty"`
+	RevisionSummary string `json:"revisionSummary,omitempty"`
+	RevisionUrl     string `json:"revisionUrl,omitempty"`
+}
+
+// ExecutionTrigger represents what triggered the pipeline execution
+type ExecutionTrigger struct {
+	TriggerType   string `json:"triggerType"`
+	TriggerDetail string `json:"triggerDetail,omitempty"`
+}
+
+// StopExecutionTrigger represents what stopped the pipeline execution
+type StopExecutionTrigger struct {
+	Reason string `json:"reason,omitempty"`
+}
+
+// PipelineExecutionSummary represents a summary of pipeline execution
+type PipelineExecutionSummary struct {
+	PipelineExecutionId string                      `json:"pipelineExecutionId"`
+	Status              string                      `json:"status"`
+	StatusSummary       string                      `json:"statusSummary,omitempty"`
+	StartTime           *time.Time                  `json:"startTime,omitempty"`
+	LastUpdateTime      *time.Time                  `json:"lastUpdateTime,omitempty"`
+	SourceRevisions     []PipelineExecutionRevision `json:"sourceRevisions,omitempty"`
+	Trigger             *ExecutionTrigger           `json:"trigger,omitempty"`
+	StopTrigger         *StopExecutionTrigger       `json:"stopTrigger,omitempty"`
+}
+
 // Pipeline represents a CodePipeline with full AWS structure
 type Pipeline struct {
 	Pipeline PipelineDeclaration `json:"pipeline"`
