@@ -1,103 +1,97 @@
-name: Security
+# GitHub Code Scanning is now available by default, so this workflow is commented out
+# This file is intentionally commented out to disable the security workflow
 
-on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-  schedule:
-    # Run security checks daily at 2 AM UTC
-    - cron: '0 2 * * *'
+# name: Security
 
-jobs:
-  govulncheck:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v5.0.0
+# on:
+#   schedule:
+#     # Run security checks daily at 2 AM UTC
+#     - cron: '0 2 * * *'
+#   workflow_dispatch: # Manual trigger
 
-    - name: Set up Go
-      uses: actions/setup-go@v6.0.0
-      with:
-        go-version: '1.24'
+# env:
+#   GO_VERSION: '1.23'
 
-    - name: Install govulncheck
-      run: go install golang.org/x/vuln/cmd/govulncheck@latest
+# jobs:
+#   security:
+#     runs-on: ubuntu-latest
+#     strategy:
+#       matrix:
+#         tool: [govulncheck, nancy, gosec]
+#     steps:
+#     - uses: actions/checkout@v5.0.0
 
-    - name: Run govulncheck
-      run: govulncheck ./...
+#     - name: Set up Go
+#       uses: actions/setup-go@v6.0.0
+#       with:
+#         go-version: ${{ env.GO_VERSION }}
 
-  nancy:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v5.0.0
+#     - name: Cache Go modules
+#       uses: actions/cache@v4.2.4
+#       with:
+#         path: ~/go/pkg/mod
+#         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+#         restore-keys: |
+#           ${{ runner.os }}-go-
 
-    - name: Set up Go
-      uses: actions/setup-go@v6.0.0
-      with:
-        go-version: '1.24'
+#     - name: Install dependencies
+#       run: go mod download
 
-    - name: WriteGoList
-      run: go list -json -m all > go.list
+#     - name: Run govulncheck
+#       if: matrix.tool == 'govulncheck'
+#       run: |
+#         go install golang.org/x/vuln/cmd/govulncheck@latest
+#         govulncheck ./...
 
-    - name: Nancy
-      uses: sonatype-nexus-community/nancy-github-action@main
-      with:
-        nancyCommand: sleuth --loud
+#     - name: Run Nancy
+#       if: matrix.tool == 'nancy'
+#       run: |
+#         go list -json -m all > go.list
+      
+#     - name: Nancy Security Scan
+#       if: matrix.tool == 'nancy'
+#       uses: sonatype-nexus-community/nancy-github-action@main
+#       with:
+#         nancyCommand: sleuth --loud
 
-  gosec:
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-    env:
-      GO111MODULE: on
-    steps:
-    - name: Checkout Source
-      uses: actions/checkout@v5.0.0
+#     - name: Run Gosec Security Scanner
+#       if: matrix.tool == 'gosec'
+#       uses: securego/gosec@master
+#       with:
+#         args: '-no-fail -fmt sarif -out results.sarif ./...'
 
-    - name: Set up Go
-      uses: actions/setup-go@v6.0.0
-      with:
-        go-version: '1.24'
+#     - name: Upload SARIF file
+#       if: matrix.tool == 'gosec'
+#       uses: github/codeql-action/upload-sarif@codeql-bundle-v2.23.0
+#       with:
+#         sarif_file: results.sarif
 
-    - name: Run Gosec Security Scanner
-      uses: securego/gosec@master
-      with:
-        # we let the report trigger content trigger a failure using the GitHub Security features.
-        args: '-no-fail -fmt sarif -out results.sarif ./...'
+#   codeql:
+#     name: CodeQL
+#     runs-on: ubuntu-latest
+#     permissions:
+#       actions: read
+#       contents: read
+#       security-events: write
 
-    - name: Upload SARIF file
-      uses: github/codeql-action/upload-sarif@codeql-bundle-v2.23.0
-      with:
-        sarif_file: results.sarif
+#     strategy:
+#       fail-fast: false
+#       matrix:
+#         language: [ 'go' ]
 
-  codeql:
-    name: CodeQL
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
+#     steps:
+#     - name: Checkout repository
+#       uses: actions/checkout@v5.0.0
 
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [ 'go' ]
+#     - name: Initialize CodeQL
+#       uses: github/codeql-action/init@codeql-bundle-v2.23.0
+#       with:
+#         languages: ${{ matrix.language }}
 
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v5.0.0
+#     - name: Autobuild
+#       uses: github/codeql-action/autobuild@codeql-bundle-v2.23.0
 
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@codeql-bundle-v2.23.0
-      with:
-        languages: ${{ matrix.language }}
-
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@codeql-bundle-v2.23.0
-
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@codeql-bundle-v2.23.0
-      with:
-        category: "/language:${{matrix.language}}"
+#     - name: Perform CodeQL Analysis
+#       uses: github/codeql-action/analyze@codeql-bundle-v2.23.0
+#       with:
+#         category: "/language:${{matrix.language}}"
