@@ -25,14 +25,7 @@ jobs:
       uses: actions/setup-go@v6.0.0
       with:
         go-version: ${{ matrix.go-version }}
-
-    - name: Cache Go modules
-      uses: actions/cache@v4.2.4
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+        cache: true
 
     - name: Install dependencies
       run: go mod download
@@ -65,14 +58,7 @@ jobs:
       uses: actions/setup-go@v6.0.0
       with:
         go-version: ${{ env.GO_VERSION }}
-
-    - name: Cache Go modules
-      uses: actions/cache@v4.2.4
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+        cache: true
 
     - name: Install dependencies
       run: go mod download
@@ -95,14 +81,7 @@ jobs:
       uses: actions/setup-go@v6.0.0
       with:
         go-version: ${{ env.GO_VERSION }}
-
-    - name: Cache Go modules
-      uses: actions/cache@v4.2.4
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+        cache: true
 
     - name: Install dependencies
       run: go mod download
