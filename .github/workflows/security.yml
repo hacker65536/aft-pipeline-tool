@@ -36,14 +36,13 @@ jobs:
       with:
         go-version: '1.24'
 
-    - name: Install Nancy
-      run: go install github.com/sonatypecommunity/nancy@latest
-
     - name: WriteGoList
-      run: go list -json -deps ./... > go.list
+      run: go list -json -m all > go.list
 
-    - name: Run Nancy
-      run: nancy sleuth --loud < go.list
+    - name: Nancy
+      uses: sonatype-nexus-community/nancy-github-action@main
+      with:
+        nancyCommand: sleuth --loud
 
   gosec:
     runs-on: ubuntu-latest
