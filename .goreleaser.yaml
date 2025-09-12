@@ -63,7 +63,7 @@ release:
 
   # You can change the name of the release.
   # Default: '{{.Tag}}'
-  name_template: "{{.ProjectName}}-{{.Version}}"
+  # name_template: "{{.ProjectName}}-{{.Version}}"
 
   # Header template for the release body.
   # Defaults to empty.
