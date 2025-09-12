@@ -29,3 +29,9 @@ batch_update:
     branch: main
     trigger_enabled: true
     polling_enabled: false
+
+execution:
+  max_concurrent: 3    # Maximum number of concurrent pipeline executions
+  max_pipelines: 5     # Maximum number of pipelines to execute from file
+  timeout: 3600        # Timeout in seconds when waiting for executions
+  sequential: true     # Execute pipelines sequentially (wait for completion before next)

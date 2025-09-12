@@ -18,6 +18,7 @@ AWS Control Tower Account Factory for Terraform (AFT) のCodePipelineにおけ�
 - パイプライントリガーの自動修正（fix-triggers）
 - パイプラインConnectionArnの一括更新（fix-connections）
 - パイプラインタイプの変更（fix-pipeline-type）
+- **パイプライン実行管理（execute）**
 - 複数出力フォーマット対応（table, json, csv）
 - キャッシュ機能によるパフォーマンス向上
 - ドライラン機能
@@ -127,6 +128,110 @@ go build -o aft-pipeline-tool
 ./aft-pipeline-tool fix-pipeline-type --pipeline-type V2
 ```
 
+#### パイプライン実行管理（execute）
+
+パイプラインの実行開始、停止、ステータス確認、履歴表示を行います。
+
+##### パイプライン実行開始
+
+```bash
+# 単一パイプラインの実行開始
+./aft-pipeline-tool execute start "123456789012-customizations-pipeline"
+
+# 全AFTパイプラインの実行開始
+./aft-pipeline-tool execute start --all
+
+# 実行完了まで待機
+./aft-pipeline-tool execute start "123456789012-customizations-pipeline" --wait
+
+# 既に実行中でも強制実行
+./aft-pipeline-tool execute start "123456789012-customizations-pipeline" --force
+
+# タイムアウト設定（秒）
+./aft-pipeline-tool execute start "123456789012-customizations-pipeline" --wait --timeout 7200
+```
+
+##### ファイルからの一括実行
+
+```bash
+# ファイルに記載されたパイプラインを一括実行
+./aft-pipeline-tool execute start-from-file pipelines.txt
+
+# 実行完了まで待機
+./aft-pipeline-tool execute start-from-file pipelines.txt --wait
+
+# シーケンシャル実行（1つずつ順番に実行し、完了を待ってから次を開始）
+./aft-pipeline-tool execute start-from-file pipelines.txt --sequential
+
+# 強制実行（既に実行中のパイプラインもスキップせずに実行）
+./aft-pipeline-tool execute start-from-file pipelines.txt --force
+```
+
+**実行モード**:
+- **並行実行（デフォルト）**: `max_concurrent`設定に従ってバッチ処理
+  - 設定された数のパイプラインを同時に開始
+  - 現在のバッチが完了してから次のバッチを開始
+  - リソース効率的で安全な実行方式
+- **シーケンシャル実行**: `--sequential`フラグまたは設定で有効化
+  - 1つのパイプラインが完了してから次を開始
+  - 確実だが時間がかかる方式
+
+##### パイプライン実行停止
+
+```bash
+# 最新の実行中パイプラインを停止
+./aft-pipeline-tool execute stop "123456789012-customizations-pipeline"
+
+# 特定の実行IDを停止
+./aft-pipeline-tool execute stop "123456789012-customizations-pipeline" "execution-id-12345"
+
+# 停止理由を指定
+./aft-pipeline-tool execute stop "123456789012-customizations-pipeline" --reason "Manual stop for maintenance"
+
+# 実行IDフラグで指定
+./aft-pipeline-tool execute stop "123456789012-customizations-pipeline" --execution-id "execution-id-12345"
+```
+
+##### パイプライン実行ステータス確認
+
+```bash
+# 特定パイプラインのステータス確認
+./aft-pipeline-tool execute status "123456789012-customizations-pipeline"
+
+# 全AFTパイプラインのステータス確認
+./aft-pipeline-tool execute status
+
+# 詳細情報を表示
+./aft-pipeline-tool execute status "123456789012-customizations-pipeline" --details
+```
+
+##### パイプライン実行履歴表示
+
+```bash
+# 特定パイプラインの実行履歴（デフォルト10件）
+./aft-pipeline-tool execute history "123456789012-customizations-pipeline"
+
+# 全AFTパイプラインの実行履歴
+./aft-pipeline-tool execute history
+
+# 表示件数を指定
+./aft-pipeline-tool execute history "123456789012-customizations-pipeline" --max-results 20
+
+# 詳細情報を表示
+./aft-pipeline-tool execute history "123456789012-customizations-pipeline" --details
+```
+
+##### パイプラインリストファイルの形式
+
+`pipelines.txt`の例:
+```
+123456789012-customizations-pipeline
+234567890123-customizations-pipeline
+345678901234-customizations-pipeline
+# コメント行（#で始まる行は無視されます）
+456789012345-customizations-pipeline
+```
+
 #### テスト機能
 
 ```bash
@@ -166,6 +271,12 @@ output:
 
 batch_update:
   dry_run: true
+
+execution:
+  max_concurrent: 3    # 最大同時実行数
+  max_pipelines: 50    # ファイルから読み込む最大パイプライン数
+  timeout: 3600        # 実行完了待機のタイムアウト（秒）
+  sequential: false    # シーケンシャル実行モード
 ```
 
 ## 必要なIAM権限
@@ -180,13 +291,27 @@ batch_update:
         "organizations:ListAccounts",
         "codepipeline:ListPipelines",
         "codepipeline:GetPipeline",
-        "codepipeline:UpdatePipeline"
+        "codepipeline:UpdatePipeline",
+        "codepipeline:StartPipelineExecution",
+        "codepipeline:StopPipelineExecution",
+        "codepipeline:GetPipelineExecution",
+        "codepipeline:ListPipelineExecutions"
       ],
       "Resource": "*"
     }
   ]
 }
 ```
+
+**権限の説明**:
+- `organizations:ListAccounts`: AFT管理下のアカウント一覧取得
+- `codepipeline:ListPipelines`: パイプライン一覧取得
+- `codepipeline:GetPipeline`: パイプライン詳細情報取得
+- `codepipeline:UpdatePipeline`: パイプライン設定更新
+- `codepipeline:StartPipelineExecution`: パイプライン実行開始
+- `codepipeline:StopPipelineExecution`: パイプライン実行停止
+- `codepipeline:GetPipelineExecution`: パイプライン実行詳細取得
+- `codepipeline:ListPipelineExecutions`: パイプライン実行履歴取得
 
 ## トラブルシューティング
 

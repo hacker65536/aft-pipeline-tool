@@ -417,6 +417,68 @@ func (c *Client) GetPipelineState(ctx context.Context, pipelineName string) (*co
 	return output, nil
 }
 
+// StartPipelineExecution starts a pipeline execution
+func (c *Client) StartPipelineExecution(ctx context.Context, pipelineName string) (*codepipeline.StartPipelineExecutionOutput, error) {
+	output, err := c.CodePipeline.StartPipelineExecution(ctx, &codepipeline.StartPipelineExecutionInput{
+		Name: &pipelineName,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to start pipeline execution for %s: %w", pipelineName, err)
+	}
+
+	return output, nil
+}
+
+// GetPipelineExecution retrieves information about a specific pipeline execution
+func (c *Client) GetPipelineExecution(ctx context.Context, pipelineName, executionId string) (*codepipeline.GetPipelineExecutionOutput, error) {
+	output, err := c.CodePipeline.GetPipelineExecution(ctx, &codepipeline.GetPipelineExecutionInput{
+		PipelineName:        &pipelineName,
+		PipelineExecutionId: &executionId,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get pipeline execution %s for %s: %w", executionId, pipelineName, err)
+	}
+
+	return output, nil
+}
+
+// ListPipelineExecutions lists recent executions for a pipeline
+func (c *Client) ListPipelineExecutions(ctx context.Context, pipelineName string, maxResults int32) (*codepipeline.ListPipelineExecutionsOutput, error) {
+	input := &codepipeline.ListPipelineExecutionsInput{
+		PipelineName: &pipelineName,
+	}
+
+	if maxResults > 0 {
+		input.MaxResults = &maxResults
+	}
+
+	output, err := c.CodePipeline.ListPipelineExecutions(ctx, input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list pipeline executions for %s: %w", pipelineName, err)
+	}
+
+	return output, nil
+}
+
+// StopPipelineExecution stops a pipeline execution
+func (c *Client) StopPipelineExecution(ctx context.Context, pipelineName, executionId, reason string) (*codepipeline.StopPipelineExecutionOutput, error) {
+	input := &codepipeline.StopPipelineExecutionInput{
+		PipelineName:        &pipelineName,
+		PipelineExecutionId: &executionId,
+	}
+
+	if reason != "" {
+		input.Reason = &reason
+	}
+
+	output, err := c.CodePipeline.StopPipelineExecution(ctx, input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stop pipeline execution %s for %s: %w", executionId, pipelineName, err)
+	}
+
+	return output, nil
+}
+
 // updateSourceActionTrigger updates source action trigger configuration
 func updateSourceActionTrigger(action *types.ActionDeclaration, settings models.TriggerSettings) {
 	if action.Configuration == nil {
