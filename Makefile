@@ -7,7 +7,7 @@ BUILD_DIR=build
 VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 GIT_COMMIT?=$(shell git rev-parse HEAD 2>/dev/null || echo "unknown")
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-LDFLAGS=-ldflags "-s -w -X aft-pipeline-tool/cmd.Version=$(VERSION) -X aft-pipeline-tool/cmd.GitCommit=$(GIT_COMMIT) -X aft-pipeline-tool/cmd.BuildDate=$(BUILD_DATE)"
+LDFLAGS=-ldflags "-s -w -X github.com/hacker65536/aft-pipeline-tool/cmd.Version=$(VERSION) -X github.com/hacker65536/aft-pipeline-tool/cmd.GitCommit=$(GIT_COMMIT) -X github.com/hacker65536/aft-pipeline-tool/cmd.BuildDate=$(BUILD_DATE)"
 
 # Go parameters
 GOCMD=go
