@@ -568,7 +568,11 @@ func readPipelineNamesFromFile(filePath string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			fmt.Printf("Warning: failed to close file: %v\n", closeErr)
+		}
+	}()
 
 	var pipelineNames []string
 	scanner := bufio.NewScanner(file)
@@ -647,13 +651,14 @@ func executePipelinesSequentially(ctx context.Context, client *aws.Client, pipel
 		results = append(results, result)
 
 		// Show completion status
-		if result.Status == "Succeeded" {
+		switch result.Status {
+		case "Succeeded":
 			fmt.Printf("  %s Pipeline %s completed successfully\n", utils.Success("COMPLETED"), pipelineName)
-		} else if result.Status == "Failed" {
+		case "Failed":
 			fmt.Printf("  %s Pipeline %s failed\n", utils.Error("FAILED"), pipelineName)
-		} else if result.Status == "Stopped" {
+		case "Stopped":
 			fmt.Printf("  %s Pipeline %s was stopped\n", utils.Warning("STOPPED"), pipelineName)
-		} else {
+		default:
 			fmt.Printf("  %s Pipeline %s status: %s\n", utils.Info("STATUS"), pipelineName, result.Status)
 		}
 	}
