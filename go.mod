@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/aws/aws-sdk-go-v2/config v1.31.7
-	github.com/aws/aws-sdk-go-v2/service/codepipeline v1.46.3
+	github.com/aws/aws-sdk-go-v2/service/codepipeline v1.46.4
 	github.com/aws/aws-sdk-go-v2/service/organizations v1.45.1
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/viper v1.21.0
