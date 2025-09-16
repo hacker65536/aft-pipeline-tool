@@ -1,6 +1,6 @@
-# AFT CodePipeline Git Triggers 編集ツール
+# AFT CodePipeline 操作ツール
 
-AWS Control Tower Account Factory for Terraform (AFT) のCodePipelineにおけるGitトリガー設定を管理するGoツールです。
+このツールは、AWS Control Tower Account Factory for Terraform (AFT) の CodePipeline を CLI から操作するためのツールです。
 
 ## 概要
 
