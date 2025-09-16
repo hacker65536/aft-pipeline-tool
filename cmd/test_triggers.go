@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/hacker65536/aft-pipeline-tool/internal/models"
+	"github.com/hacker65536/aft-pipeline-tool/internal/pipeline"
 )
 
 var testTriggersCmd = &cobra.Command{
@@ -36,7 +37,7 @@ func runTestTriggers(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Testing trigger fix logic with file: %s\n", testTriggersFile)
 
 	// 入力検証
-	if err := validateTriggerModeFlags(); err != nil {
+	if err := pipeline.ValidateTriggerModeFlags(triggerMode, sourceAction); err != nil {
 		return err
 	}
 
@@ -59,61 +60,40 @@ func runTestTriggers(cmd *cobra.Command, args []string) error {
 	}
 
 	// Pipelineオブジェクトを構築
-	pipeline := &models.Pipeline{
+	pipelineObj := &models.Pipeline{
 		Pipeline:    pipelineData.Pipeline,
 		Metadata:    pipelineData.Metadata,
 		AccountID:   pipelineData.AccountID,
 		AccountName: pipelineData.AccountName,
 	}
 
-	fmt.Printf("Pipeline: %s\n", pipeline.Pipeline.Name)
-	fmt.Printf("Account ID: %s\n", pipeline.AccountID)
-	fmt.Printf("Account Name: %s\n", pipeline.AccountName)
+	fmt.Printf("Pipeline: %s\n", pipelineObj.Pipeline.Name)
+	fmt.Printf("Account ID: %s\n", pipelineObj.AccountID)
+	fmt.Printf("Account Name: %s\n", pipelineObj.AccountName)
 
 	// テスト実行
-	return testFixPipelineTriggers(pipeline, true)
+	return testFixPipelineTriggers(pipelineObj, true)
 }
 
-func testFixPipelineTriggers(pipeline *models.Pipeline, dryRun bool) error {
+func testFixPipelineTriggers(pipelineObj *models.Pipeline, dryRun bool) error {
 	fmt.Println("\n=== Testing Trigger Fix Logic ===")
 
-	// Source stageからactionsを分析
-	sourceActions := analyzeSourceActions(pipeline)
-	if len(sourceActions) == 0 {
-		fmt.Println("  No source actions found")
-		return nil
-	}
+	// プロセッサー作成
+	processor := pipeline.NewTriggersProcessor(triggerMode, sourceAction)
 
-	fmt.Printf("  Found %d source actions:\n", len(sourceActions))
-	for _, action := range sourceActions {
-		fmt.Printf("    - %s (Provider: %s)\n", action.Name, action.ActionTypeId.Provider)
-	}
+	// 分析結果を表示
+	fmt.Printf("  Pipeline: %s\n", pipelineObj.Pipeline.Name)
+	fmt.Printf("  Current triggers: %d\n", len(pipelineObj.Pipeline.Triggers))
 
-	// 現在のtriggersを分析
-	existingTriggers := pipeline.Pipeline.Triggers
-	fmt.Printf("\n  Current triggers: %d\n", len(existingTriggers))
+	// 更新が必要かどうかを判定
+	needsUpdate := processor.ShouldUpdate(pipelineObj)
+	fmt.Printf("  Needs update: %t\n", needsUpdate)
 
-	// 新しいtriggersを生成
-	newTriggers := generateTriggers(sourceActions, pipeline)
-	fmt.Printf("  Generated %d new triggers\n", len(newTriggers))
-
-	// triggersが必要かどうかを判定
-	needsTriggers := shouldAddTriggers(sourceActions, existingTriggers, pipeline)
-
-	// 差分を表示（改良版）
+	// 差分を表示
 	fmt.Println("\n=== Trigger Diff Analysis ===")
-	err := showTriggersDiff(pipeline, newTriggers)
+	err := processor.ShowDiff(pipelineObj)
 	if err != nil {
 		fmt.Printf("  Error generating diff: %v\n", err)
-	}
-
-	if needsTriggers {
-		// AWS API UpdatePipelineInput の内容を出力（変更が必要な場合のみ）
-		fmt.Println("\n=== AWS API UpdatePipelineInput Content ===")
-		err = showUpdatePipelineInput(pipeline, newTriggers)
-		if err != nil {
-			fmt.Printf("Error generating UpdatePipelineInput: %v\n", err)
-		}
 	}
 
 	return nil

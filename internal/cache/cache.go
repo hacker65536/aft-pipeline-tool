@@ -15,12 +15,38 @@ import (
 
 // FileCache represents a file-based cache implementation
 type FileCache struct {
-	baseDir string
+	baseDir    string
+	awsContext *AWSContext
 }
 
 // NewFileCache creates a new file cache instance
 func NewFileCache(baseDir string) *FileCache {
-	return &FileCache{baseDir: baseDir}
+	return &FileCache{
+		baseDir:    baseDir,
+		awsContext: nil, // Will be set when AWS context is available
+	}
+}
+
+// NewFileCacheWithContext creates a new file cache instance with AWS context
+func NewFileCacheWithContext(baseDir string, awsContext *AWSContext) *FileCache {
+	return &FileCache{
+		baseDir:    baseDir,
+		awsContext: awsContext,
+	}
+}
+
+// SetAWSContext sets the AWS context for cache isolation
+func (fc *FileCache) SetAWSContext(awsContext *AWSContext) {
+	fc.awsContext = awsContext
+}
+
+// getCacheDir returns the cache directory with AWS context isolation
+func (fc *FileCache) getCacheDir() string {
+	if fc.awsContext == nil {
+		// Fallback to legacy behavior for backward compatibility
+		return fc.baseDir
+	}
+	return filepath.Join(fc.baseDir, fc.awsContext.GetCacheSubDirectory())
 }
 
 // CacheResult represents the result of a cache operation
@@ -31,7 +57,8 @@ type CacheResult struct {
 
 // GetAccounts retrieves cached account data
 func (fc *FileCache) GetAccounts() (*models.AccountsCache, error) {
-	cachePath := filepath.Join(fc.baseDir, "accounts.json")
+	cacheDir := fc.getCacheDir()
+	cachePath := filepath.Join(cacheDir, "accounts.json")
 
 	data, err := os.ReadFile(cachePath)
 	if err != nil {
@@ -70,8 +97,9 @@ func (fc *FileCache) SetAccounts(accounts []models.Account, ttl int) error {
 		return err
 	}
 
-	cachePath := filepath.Join(fc.baseDir, "accounts.json")
-	if err := os.MkdirAll(fc.baseDir, 0755); err != nil {
+	cacheDir := fc.getCacheDir()
+	cachePath := filepath.Join(cacheDir, "accounts.json")
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
 		return err
 	}
 
@@ -80,7 +108,8 @@ func (fc *FileCache) SetAccounts(accounts []models.Account, ttl int) error {
 
 // GetPipelines retrieves cached pipeline data
 func (fc *FileCache) GetPipelines() (*models.PipelinesCache, error) {
-	cachePath := filepath.Join(fc.baseDir, "pipelines.json")
+	cacheDir := fc.getCacheDir()
+	cachePath := filepath.Join(cacheDir, "pipelines.json")
 
 	data, err := os.ReadFile(cachePath)
 	if err != nil {
@@ -113,8 +142,9 @@ func (fc *FileCache) SetPipelines(pipelines []models.Pipeline, ttl int) error {
 		return err
 	}
 
-	cachePath := filepath.Join(fc.baseDir, "pipelines.json")
-	if err := os.MkdirAll(fc.baseDir, 0755); err != nil {
+	cacheDir := fc.getCacheDir()
+	cachePath := filepath.Join(cacheDir, "pipelines.json")
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
 		return err
 	}
 
@@ -123,7 +153,8 @@ func (fc *FileCache) SetPipelines(pipelines []models.Pipeline, ttl int) error {
 
 // GetPipelineDetail retrieves cached individual pipeline detail data
 func (fc *FileCache) GetPipelineDetail(pipelineName string) (*models.PipelineDetailCache, error) {
-	cachePath := filepath.Join(fc.baseDir, "pipeline_details", fmt.Sprintf("%s.json", pipelineName))
+	cacheDir := fc.getCacheDir()
+	cachePath := filepath.Join(cacheDir, "pipeline_details", fmt.Sprintf("%s.json", pipelineName))
 
 	data, err := os.ReadFile(cachePath)
 	if err != nil {
@@ -162,18 +193,20 @@ func (fc *FileCache) SetPipelineDetail(pipeline models.Pipeline, ttl int) error 
 		return err
 	}
 
-	cacheDir := filepath.Join(fc.baseDir, "pipeline_details")
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+	cacheDir := fc.getCacheDir()
+	pipelineDetailsDir := filepath.Join(cacheDir, "pipeline_details")
+	if err := os.MkdirAll(pipelineDetailsDir, 0755); err != nil {
 		return err
 	}
 
-	cachePath := filepath.Join(cacheDir, fmt.Sprintf("%s.json", pipeline.GetName()))
+	cachePath := filepath.Join(pipelineDetailsDir, fmt.Sprintf("%s.json", pipeline.GetName()))
 	return os.WriteFile(cachePath, data, 0644)
 }
 
 // GetPipelineState retrieves cached pipeline state data
 func (fc *FileCache) GetPipelineState(pipelineName string) (*models.PipelineStateCache, error) {
-	cachePath := filepath.Join(fc.baseDir, "pipeline_states", fmt.Sprintf("%s.json", pipelineName))
+	cacheDir := fc.getCacheDir()
+	cachePath := filepath.Join(cacheDir, "pipeline_states", fmt.Sprintf("%s.json", pipelineName))
 
 	data, err := os.ReadFile(cachePath)
 	if err != nil {
@@ -212,18 +245,20 @@ func (fc *FileCache) SetPipelineState(pipelineName string, state *models.Pipelin
 		return err
 	}
 
-	cacheDir := filepath.Join(fc.baseDir, "pipeline_states")
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+	cacheDir := fc.getCacheDir()
+	pipelineStatesDir := filepath.Join(cacheDir, "pipeline_states")
+	if err := os.MkdirAll(pipelineStatesDir, 0755); err != nil {
 		return err
 	}
 
-	cachePath := filepath.Join(cacheDir, fmt.Sprintf("%s.json", pipelineName))
+	cachePath := filepath.Join(pipelineStatesDir, fmt.Sprintf("%s.json", pipelineName))
 	return os.WriteFile(cachePath, data, 0644)
 }
 
 // GetPipelineExecutions retrieves cached pipeline execution data
 func (fc *FileCache) GetPipelineExecutions(pipelineName string) (*models.PipelineExecutionsCache, error) {
-	cachePath := filepath.Join(fc.baseDir, "pipeline_executions", fmt.Sprintf("%s.json", pipelineName))
+	cacheDir := fc.getCacheDir()
+	cachePath := filepath.Join(cacheDir, "pipeline_executions", fmt.Sprintf("%s.json", pipelineName))
 
 	data, err := os.ReadFile(cachePath)
 	if err != nil {
@@ -262,24 +297,27 @@ func (fc *FileCache) SetPipelineExecutions(pipelineName string, executions []mod
 		return err
 	}
 
-	cacheDir := filepath.Join(fc.baseDir, "pipeline_executions")
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+	cacheDir := fc.getCacheDir()
+	pipelineExecutionsDir := filepath.Join(cacheDir, "pipeline_executions")
+	if err := os.MkdirAll(pipelineExecutionsDir, 0755); err != nil {
 		return err
 	}
 
-	cachePath := filepath.Join(cacheDir, fmt.Sprintf("%s.json", pipelineName))
+	cachePath := filepath.Join(pipelineExecutionsDir, fmt.Sprintf("%s.json", pipelineName))
 	return os.WriteFile(cachePath, data, 0644)
 }
 
 // ClearCache removes all cached data
 func (fc *FileCache) ClearCache() error {
-	accountsPath := filepath.Join(fc.baseDir, "accounts.json")
-	pipelinesPath := filepath.Join(fc.baseDir, "pipelines.json")
-	pipelineDetailsDirPath := filepath.Join(fc.baseDir, "pipeline_details")
-	pipelineStatesDirPath := filepath.Join(fc.baseDir, "pipeline_states")
-	pipelineExecutionsDirPath := filepath.Join(fc.baseDir, "pipeline_executions")
+	cacheDir := fc.getCacheDir()
 
-	// Legacy cache directories to clean up
+	accountsPath := filepath.Join(cacheDir, "accounts.json")
+	pipelinesPath := filepath.Join(cacheDir, "pipelines.json")
+	pipelineDetailsDirPath := filepath.Join(cacheDir, "pipeline_details")
+	pipelineStatesDirPath := filepath.Join(cacheDir, "pipeline_states")
+	pipelineExecutionsDirPath := filepath.Join(cacheDir, "pipeline_executions")
+
+	// Legacy cache directories to clean up (in base directory for backward compatibility)
 	legacyPipelineDetailsPath := filepath.Join(fc.baseDir, "pipeline_details.json")
 	legacyPipelineDetailsWithStateDirPath := filepath.Join(fc.baseDir, "pipeline_details_with_state")
 
@@ -306,22 +344,38 @@ func (fc *FileCache) ClearCache() error {
 		logger.GetLogger().Debug("Failed to remove legacy pipeline details with state directory", zap.Error(err))
 	}
 
+	// If AWS context is available, also remove the entire context-specific directory
+	if fc.awsContext != nil {
+		if err := os.RemoveAll(cacheDir); err != nil {
+			logger.GetLogger().Debug("Failed to remove AWS context cache directory", zap.String("dir", cacheDir), zap.Error(err))
+		}
+	}
+
 	return nil
 }
 
 // DeletePipelineCache removes cached data for a specific pipeline
 func (fc *FileCache) DeletePipelineCache(pipelineName string) error {
+	cacheDir := fc.getCacheDir()
+
 	// Delete individual pipeline detail cache
-	cachePath := filepath.Join(fc.baseDir, "pipeline_details", fmt.Sprintf("%s.json", pipelineName))
+	cachePath := filepath.Join(cacheDir, "pipeline_details", fmt.Sprintf("%s.json", pipelineName))
 	if err := os.Remove(cachePath); err != nil && !os.IsNotExist(err) {
 		logger.GetLogger().Debug("Failed to remove pipeline detail cache", zap.String("pipeline", pipelineName), zap.Error(err))
 		return fmt.Errorf("failed to remove pipeline detail cache for %s: %w", pipelineName, err)
 	}
 
 	// Delete individual pipeline state cache
-	stateCachePath := filepath.Join(fc.baseDir, "pipeline_states", fmt.Sprintf("%s.json", pipelineName))
+	stateCachePath := filepath.Join(cacheDir, "pipeline_states", fmt.Sprintf("%s.json", pipelineName))
 	if err := os.Remove(stateCachePath); err != nil && !os.IsNotExist(err) {
 		logger.GetLogger().Debug("Failed to remove pipeline state cache", zap.String("pipeline", pipelineName), zap.Error(err))
+		// Don't return error here as this is not critical
+	}
+
+	// Delete individual pipeline execution cache
+	executionCachePath := filepath.Join(cacheDir, "pipeline_executions", fmt.Sprintf("%s.json", pipelineName))
+	if err := os.Remove(executionCachePath); err != nil && !os.IsNotExist(err) {
+		logger.GetLogger().Debug("Failed to remove pipeline execution cache", zap.String("pipeline", pipelineName), zap.Error(err))
 		// Don't return error here as this is not critical
 	}
 
@@ -337,7 +391,8 @@ func (fc *FileCache) DeletePipelineCache(pipelineName string) error {
 
 // removePipelineFromPipelinesCache removes a specific pipeline from pipelines.json cache
 func (fc *FileCache) removePipelineFromPipelinesCache(pipelineName string) error {
-	cachePath := filepath.Join(fc.baseDir, "pipelines.json")
+	cacheDir := fc.getCacheDir()
+	cachePath := filepath.Join(cacheDir, "pipelines.json")
 
 	data, err := os.ReadFile(cachePath)
 	if err != nil {

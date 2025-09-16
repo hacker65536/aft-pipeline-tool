@@ -126,8 +126,9 @@ func runStartPipeline(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create AWS client: %w", err)
 	}
 
-	// Initialize cache and AFT manager
-	fileCache := cache.NewFileCache(cfg.Cache.Directory)
+	// キャッシュ初期化（AWS接続情報ごとに分離）
+	awsContext := cache.NewAWSContext(viper.GetString("aws.region"), viper.GetString("aws.profile"))
+	fileCache := cache.NewFileCacheWithContext(cfg.Cache.Directory, awsContext)
 	manager := aft.NewManager(awsClient, fileCache, cfg)
 
 	var pipelinesToExecute []models.Pipeline
@@ -829,8 +830,9 @@ func runExecuteList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create AWS client: %w", err)
 	}
 
-	// キャッシュ初期化
-	fileCache := cache.NewFileCache(cfg.Cache.Directory)
+	// キャッシュ初期化（AWS接続情報ごとに分離）
+	awsContext := cache.NewAWSContext(cfg.AWS.Region, cfg.AWS.Profile)
+	fileCache := cache.NewFileCacheWithContext(cfg.Cache.Directory, awsContext)
 
 	// AFT マネージャー初期化
 	manager := aft.NewManager(awsClient, fileCache, cfg)

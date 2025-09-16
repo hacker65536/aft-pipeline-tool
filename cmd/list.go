@@ -51,8 +51,10 @@ func runList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create AWS client: %w", err)
 	}
 
-	// キャッシュ初期化
-	fileCache := cache.NewFileCache(cfg.Cache.Directory)
+	// キャッシュ初期化（AWS接続情報ごとに分離）
+	// キャッシュ初期化（AWS Profile ベースで分離）
+	awsContext := cache.NewAWSContext(cfg.AWS.Region, cfg.AWS.Profile)
+	fileCache := cache.NewFileCacheWithContext(cfg.Cache.Directory, awsContext)
 
 	// AFT マネージャー初期化
 	manager := aft.NewManager(awsClient, fileCache, cfg)
