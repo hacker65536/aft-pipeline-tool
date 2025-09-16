@@ -9,11 +9,11 @@ import (
 // Cache defines the interface for cache operations
 type Cache interface {
 	// Account operations
-	GetAccounts() (*models.AccountCache, error)
+	GetAccounts() (*models.AccountsCache, error)
 	SetAccounts(accounts []models.Account, ttl int) error
 
 	// Pipeline operations
-	GetPipelines() (*models.PipelineCache, error)
+	GetPipelines() (*models.PipelinesCache, error)
 	SetPipelines(pipelines []models.Pipeline, ttl int) error
 
 	// Pipeline detail operations
@@ -23,6 +23,10 @@ type Cache interface {
 	// Pipeline state operations
 	GetPipelineState(pipelineName string) (*models.PipelineStateCache, error)
 	SetPipelineState(pipelineName string, state *models.PipelineState, ttl int) error
+
+	// Pipeline execution operations
+	GetPipelineExecutions(pipelineName string) (*models.PipelineExecutionsCache, error)
+	SetPipelineExecutions(pipelineName string, executions []models.PipelineExecutionSummary, ttl int) error
 
 	// Cache management
 	ClearCache() error

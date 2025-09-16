@@ -23,10 +23,12 @@ type Config struct {
 
 // CacheConfig represents cache configuration
 type CacheConfig struct {
-	Directory          string `yaml:"directory"`
-	AccountsTTL        int    `yaml:"accounts_ttl"`
-	PipelinesTTL       int    `yaml:"pipelines_ttl"`
-	PipelineDetailsTTL int    `yaml:"pipeline_details_ttl"`
+	Directory             string `yaml:"directory"`
+	AccountsTTL           int    `yaml:"accounts_ttl"`
+	PipelinesTTL          int    `yaml:"pipelines_ttl"`
+	PipelineDetailsTTL    int    `yaml:"pipeline_details_ttl"`
+	PipelineStatesTTL     int    `yaml:"pipeline_states_ttl"`
+	PipelineExecutionsTTL int    `yaml:"pipeline_executions_ttl"`
 }
 
 // AWSConfig represents AWS configuration
@@ -63,6 +65,8 @@ func LoadConfig() (*Config, error) {
 	viper.SetDefault("cache.accounts_ttl", 3600)
 	viper.SetDefault("cache.pipelines_ttl", 1800)
 	viper.SetDefault("cache.pipeline_details_ttl", 900)
+	viper.SetDefault("cache.pipeline_states_ttl", 300)
+	viper.SetDefault("cache.pipeline_executions_ttl", 600)
 	// AWS設定のデフォルトは空文字列（現在の環境を使用）
 	viper.SetDefault("aws.region", "")
 	viper.SetDefault("aws.profile", "")
@@ -89,6 +93,12 @@ func LoadConfig() (*Config, error) {
 	if config.Cache.PipelineDetailsTTL == 0 {
 		config.Cache.PipelineDetailsTTL = viper.GetInt("cache.pipeline_details_ttl")
 	}
+	if config.Cache.PipelineStatesTTL == 0 {
+		config.Cache.PipelineStatesTTL = viper.GetInt("cache.pipeline_states_ttl")
+	}
+	if config.Cache.PipelineExecutionsTTL == 0 {
+		config.Cache.PipelineExecutionsTTL = viper.GetInt("cache.pipeline_executions_ttl")
+	}
 
 	// Manual override for execution values if viper.Unmarshal didn't work properly
 	if config.Execution.MaxConcurrent == 0 {
@@ -109,6 +119,8 @@ func LoadConfig() (*Config, error) {
 		zap.Int("accounts_ttl", config.Cache.AccountsTTL),
 		zap.Int("pipelines_ttl", config.Cache.PipelinesTTL),
 		zap.Int("pipeline_details_ttl", config.Cache.PipelineDetailsTTL),
+		zap.Int("pipeline_states_ttl", config.Cache.PipelineStatesTTL),
+		zap.Int("pipeline_executions_ttl", config.Cache.PipelineExecutionsTTL),
 		zap.Int("execution_max_concurrent", config.Execution.MaxConcurrent),
 		zap.Int("execution_max_pipelines", config.Execution.MaxPipelines),
 		zap.Int("execution_timeout", config.Execution.Timeout))

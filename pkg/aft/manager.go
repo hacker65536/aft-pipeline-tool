@@ -27,6 +27,8 @@ type CacheUsage struct {
 	AccountsFromCache        bool
 	PipelinesFromCache       bool
 	PipelineDetailsFromCache bool
+	PipelineStatesFromCache  bool
+	ExecutionsFromCache      bool
 	accountsStatusSet        bool // 内部フラグ：アカウントキャッシュ状況が設定済みかどうか
 }
 
@@ -540,10 +542,17 @@ func (m *Manager) GetPipelineDetailsWithStateAndDetailedProgress(ctx context.Con
 	progress.CompleteStateRetrieval()
 
 	// キャッシュ使用状況を更新
-	if progress.StateFromAPI == 0 && len(detailedPipelines) > 0 {
+	if progress.DetailsFromAPI == 0 && len(detailedPipelines) > 0 {
 		m.cacheUsage.PipelineDetailsFromCache = true
 	} else {
 		m.cacheUsage.PipelineDetailsFromCache = false
+	}
+
+	// Pipeline states のキャッシュ使用状況を更新
+	if progress.StateFromAPI == 0 && len(detailedPipelines) > 0 {
+		m.cacheUsage.PipelineStatesFromCache = true
+	} else {
+		m.cacheUsage.PipelineStatesFromCache = false
 	}
 
 	progress.CompleteAll()
@@ -639,11 +648,11 @@ func (m *Manager) GetPipelineDetailsWithStateAndProgress(ctx context.Context, sh
 		zap.Int("from_cache", pipelinesFromCache),
 		zap.Int("from_api", pipelinesFromAPI))
 
-	// キャッシュ使用状況を更新
+	// Pipeline states のキャッシュ使用状況を更新
 	if pipelinesFromAPI == 0 && len(detailedPipelines) > 0 {
-		m.cacheUsage.PipelineDetailsFromCache = true
+		m.cacheUsage.PipelineStatesFromCache = true
 	} else {
-		m.cacheUsage.PipelineDetailsFromCache = false
+		m.cacheUsage.PipelineStatesFromCache = false
 	}
 
 	return detailedPipelines, nil
