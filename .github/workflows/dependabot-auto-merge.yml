@@ -3,6 +3,8 @@ name: Dependabot Auto Merge
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    paths-ignore:
+      - 'docs/**'
 
 permissions:
   contents: write
