@@ -1,8 +1,8 @@
-# AFT CodePipeline の操作をするツールの仕様書
+# AFT CodePipeline 操作ツールの仕様書
 
 ## 概要
 
-AWS Control Tower Account Factory for Terraform (AFT) のCodePipelineの操作を行うツールの仕様書です。
+このツールは、AWS Control Tower Account Factory for Terraform (AFT) の CodePipeline を CLI から操作するためのツールの仕様書です。
 
 ## 目的
 
