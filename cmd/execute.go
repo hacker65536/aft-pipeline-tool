@@ -60,13 +60,6 @@ Also provides subcommands for starting, stopping, and monitoring pipeline execut
 		Args:  cobra.MaximumNArgs(1),
 		RunE:  runPipelineHistory,
 	}
-
-	executeListCmd = &cobra.Command{
-		Use:   "list",
-		Short: "List AFT pipelines with execution information",
-		Long:  `List all AFT pipelines across accounts and display their current execution status and configurations.`,
-		RunE:  runExecuteList,
-	}
 )
 
 var (
@@ -91,7 +84,6 @@ func init() {
 	executeCmd.AddCommand(startFromFileCmd)
 	executeCmd.AddCommand(stopCmd)
 	executeCmd.AddCommand(historyCmd)
-	executeCmd.AddCommand(executeListCmd)
 
 	// Start command flags
 	startCmd.Flags().BoolVar(&executeAll, "all", false, "Start execution for all AFT pipelines")
@@ -112,11 +104,6 @@ func init() {
 	// History command flags
 	historyCmd.Flags().Int32Var(&maxResults, "max-results", 10, "Maximum number of executions to show (default: 10)")
 	historyCmd.Flags().BoolVar(&showDetails, "details", false, "Show detailed execution information")
-
-	// Execute list command flags
-	executeListCmd.Flags().StringVarP(&executeListFormat, "format", "f", "table", "Output format (table, json, csv)")
-	executeListCmd.Flags().StringVar(&executeListAccountFilter, "account-filter", "", "Filter by account ID pattern")
-	executeListCmd.Flags().BoolVar(&executeListShowDetails, "show-details", false, "Show detailed information (Account ID, Pipeline Type, Trigger, Last Updated)")
 
 	// Execute command flags (for default list behavior)
 	executeCmd.Flags().StringVarP(&executeListFormat, "format", "f", "table", "Output format (table, json, csv)")
