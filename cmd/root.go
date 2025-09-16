@@ -1,12 +1,15 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/hacker65536/aft-pipeline-tool/internal/aws"
+	"github.com/hacker65536/aft-pipeline-tool/internal/cache"
 	"github.com/hacker65536/aft-pipeline-tool/internal/logger"
 	"github.com/hacker65536/aft-pipeline-tool/internal/utils"
 )
@@ -77,4 +80,23 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Printf("%s %s\n", utils.Info("Using config file:"), viper.ConfigFileUsed())
 	}
+}
+
+// createAWSContextWithIdentity creates an AWS context with IAM identity information
+func createAWSContextWithIdentity(ctx context.Context, awsClient *aws.Client, region, profile string) (*cache.AWSContext, error) {
+	// Get caller identity to retrieve IAM User ID and Account ID
+	identity, err := awsClient.GetCallerIdentity(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get caller identity: %w", err)
+	}
+
+	var userID, account string
+	if identity.UserId != nil {
+		userID = *identity.UserId
+	}
+	if identity.Account != nil {
+		account = *identity.Account
+	}
+
+	return cache.NewAWSContextWithIdentity(region, profile, userID, account), nil
 }

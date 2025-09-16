@@ -42,8 +42,9 @@ func runCacheClear(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// キャッシュ初期化
-	fileCache := cache.NewFileCache(cfg.Cache.Directory)
+	// キャッシュ初期化（AWS接続情報ごとに分離）
+	awsContext := cache.NewAWSContext(cfg.AWS.Region, cfg.AWS.Profile)
+	fileCache := cache.NewFileCacheWithContext(cfg.Cache.Directory, awsContext)
 
 	// キャッシュクリア実行
 	if err := fileCache.ClearCache(); err != nil {
@@ -61,8 +62,9 @@ func runCacheStatus(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// キャッシュ初期化
-	fileCache := cache.NewFileCache(cfg.Cache.Directory)
+	// キャッシュ初期化（AWS接続情報ごとに分離）
+	awsContext := cache.NewAWSContext(cfg.AWS.Region, cfg.AWS.Profile)
+	fileCache := cache.NewFileCacheWithContext(cfg.Cache.Directory, awsContext)
 
 	fmt.Printf("Cache Directory: %s\n", cfg.Cache.Directory)
 	fmt.Println()

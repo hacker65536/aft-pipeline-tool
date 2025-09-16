@@ -6,12 +6,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/codepipeline"
 	"github.com/aws/aws-sdk-go-v2/service/organizations"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 )
 
 // Client represents AWS service clients
 type Client struct {
 	Organizations *organizations.Client
 	CodePipeline  *codepipeline.Client
+	STS           *sts.Client
 	Config        config.Config
 }
 
@@ -40,6 +42,12 @@ func NewClient(ctx context.Context, region, profile string) (*Client, error) {
 	return &Client{
 		Organizations: organizations.NewFromConfig(cfg),
 		CodePipeline:  codepipeline.NewFromConfig(cfg),
+		STS:           sts.NewFromConfig(cfg),
 		Config:        cfg,
 	}, nil
+}
+
+// GetCallerIdentity returns the AWS caller identity information
+func (c *Client) GetCallerIdentity(ctx context.Context) (*sts.GetCallerIdentityOutput, error) {
+	return c.STS.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
 }
