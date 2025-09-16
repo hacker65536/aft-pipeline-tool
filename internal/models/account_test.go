@@ -5,15 +5,15 @@ import (
 	"time"
 )
 
-func TestAccountCache_IsExpired(t *testing.T) {
+func TestAccountsCache_IsExpired(t *testing.T) {
 	tests := []struct {
 		name     string
-		cache    AccountCache
+		cache    AccountsCache
 		expected bool
 	}{
 		{
 			name: "not expired",
-			cache: AccountCache{
+			cache: AccountsCache{
 				CachedAt: time.Now().Add(-30 * time.Minute),
 				TTL:      3600, // 1 hour
 			},
@@ -21,7 +21,7 @@ func TestAccountCache_IsExpired(t *testing.T) {
 		},
 		{
 			name: "expired",
-			cache: AccountCache{
+			cache: AccountsCache{
 				CachedAt: time.Now().Add(-2 * time.Hour),
 				TTL:      3600, // 1 hour
 			},

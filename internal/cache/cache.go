@@ -30,7 +30,7 @@ type CacheResult struct {
 }
 
 // GetAccounts retrieves cached account data
-func (fc *FileCache) GetAccounts() (*models.AccountCache, error) {
+func (fc *FileCache) GetAccounts() (*models.AccountsCache, error) {
 	cachePath := filepath.Join(fc.baseDir, "accounts.json")
 
 	data, err := os.ReadFile(cachePath)
@@ -39,7 +39,7 @@ func (fc *FileCache) GetAccounts() (*models.AccountCache, error) {
 		return nil, err
 	}
 
-	var cache models.AccountCache
+	var cache models.AccountsCache
 	if err := json.Unmarshal(data, &cache); err != nil {
 		logger.GetLogger().Debug("Failed to unmarshal cache data", zap.Error(err))
 		return nil, err
@@ -59,7 +59,7 @@ func (fc *FileCache) GetAccounts() (*models.AccountCache, error) {
 
 // SetAccounts stores account data in cache
 func (fc *FileCache) SetAccounts(accounts []models.Account, ttl int) error {
-	cache := models.AccountCache{
+	cache := models.AccountsCache{
 		Accounts: accounts,
 		CachedAt: time.Now(),
 		TTL:      ttl,
@@ -79,7 +79,7 @@ func (fc *FileCache) SetAccounts(accounts []models.Account, ttl int) error {
 }
 
 // GetPipelines retrieves cached pipeline data
-func (fc *FileCache) GetPipelines() (*models.PipelineCache, error) {
+func (fc *FileCache) GetPipelines() (*models.PipelinesCache, error) {
 	cachePath := filepath.Join(fc.baseDir, "pipelines.json")
 
 	data, err := os.ReadFile(cachePath)
@@ -87,7 +87,7 @@ func (fc *FileCache) GetPipelines() (*models.PipelineCache, error) {
 		return nil, err
 	}
 
-	var cache models.PipelineCache
+	var cache models.PipelinesCache
 	if err := json.Unmarshal(data, &cache); err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func (fc *FileCache) GetPipelines() (*models.PipelineCache, error) {
 
 // SetPipelines stores pipeline data in cache
 func (fc *FileCache) SetPipelines(pipelines []models.Pipeline, ttl int) error {
-	cache := models.PipelineCache{
+	cache := models.PipelinesCache{
 		Pipelines: pipelines,
 		CachedAt:  time.Now(),
 		TTL:       ttl,
@@ -221,12 +221,63 @@ func (fc *FileCache) SetPipelineState(pipelineName string, state *models.Pipelin
 	return os.WriteFile(cachePath, data, 0644)
 }
 
+// GetPipelineExecutions retrieves cached pipeline execution data
+func (fc *FileCache) GetPipelineExecutions(pipelineName string) (*models.PipelineExecutionsCache, error) {
+	cachePath := filepath.Join(fc.baseDir, "pipeline_executions", fmt.Sprintf("%s.json", pipelineName))
+
+	data, err := os.ReadFile(cachePath)
+	if err != nil {
+		logger.GetLogger().Debug("Failed to read pipeline execution cache file", zap.String("path", cachePath), zap.Error(err))
+		return nil, err
+	}
+
+	var cache models.PipelineExecutionsCache
+	if err := json.Unmarshal(data, &cache); err != nil {
+		logger.GetLogger().Debug("Failed to unmarshal pipeline execution cache data", zap.Error(err))
+		return nil, err
+	}
+
+	// TTLチェック
+	elapsed := time.Since(cache.CachedAt).Seconds()
+	logger.GetLogger().Debug("Pipeline execution cache TTL check", zap.Float64("elapsed", elapsed), zap.Int("ttl", cache.TTL), zap.String("pipeline", pipelineName))
+	if elapsed > float64(cache.TTL) {
+		logger.GetLogger().Debug("Pipeline execution cache expired", zap.String("pipeline", pipelineName))
+		return nil, fmt.Errorf("cache expired")
+	}
+
+	logger.GetLogger().Debug("Pipeline execution cache hit", zap.String("pipeline", pipelineName))
+	return &cache, nil
+}
+
+// SetPipelineExecutions stores pipeline execution data in cache
+func (fc *FileCache) SetPipelineExecutions(pipelineName string, executions []models.PipelineExecutionSummary, ttl int) error {
+	cache := models.PipelineExecutionsCache{
+		Executions: executions,
+		CachedAt:   time.Now(),
+		TTL:        ttl,
+	}
+
+	data, err := json.MarshalIndent(cache, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	cacheDir := filepath.Join(fc.baseDir, "pipeline_executions")
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		return err
+	}
+
+	cachePath := filepath.Join(cacheDir, fmt.Sprintf("%s.json", pipelineName))
+	return os.WriteFile(cachePath, data, 0644)
+}
+
 // ClearCache removes all cached data
 func (fc *FileCache) ClearCache() error {
 	accountsPath := filepath.Join(fc.baseDir, "accounts.json")
 	pipelinesPath := filepath.Join(fc.baseDir, "pipelines.json")
 	pipelineDetailsDirPath := filepath.Join(fc.baseDir, "pipeline_details")
 	pipelineStatesDirPath := filepath.Join(fc.baseDir, "pipeline_states")
+	pipelineExecutionsDirPath := filepath.Join(fc.baseDir, "pipeline_executions")
 
 	// Legacy cache directories to clean up
 	legacyPipelineDetailsPath := filepath.Join(fc.baseDir, "pipeline_details.json")
@@ -247,6 +298,9 @@ func (fc *FileCache) ClearCache() error {
 	}
 	if err := os.RemoveAll(pipelineStatesDirPath); err != nil {
 		logger.GetLogger().Debug("Failed to remove pipeline states directory", zap.Error(err))
+	}
+	if err := os.RemoveAll(pipelineExecutionsDirPath); err != nil {
+		logger.GetLogger().Debug("Failed to remove pipeline executions directory", zap.Error(err))
 	}
 	if err := os.RemoveAll(legacyPipelineDetailsWithStateDirPath); err != nil {
 		logger.GetLogger().Debug("Failed to remove legacy pipeline details with state directory", zap.Error(err))
@@ -293,7 +347,7 @@ func (fc *FileCache) removePipelineFromPipelinesCache(pipelineName string) error
 		return err
 	}
 
-	var cache models.PipelineCache
+	var cache models.PipelinesCache
 	if err := json.Unmarshal(data, &cache); err != nil {
 		return err
 	}

@@ -57,21 +57,10 @@ func (f *Formatter) formatTable(pipelines []models.Pipeline, w io.Writer) error 
 		}
 	}()
 
-	// state情報があるかチェック（withStateフラグまたは既存のstate情報）
-	hasStateInfo := f.withState
-	if !hasStateInfo {
-		for _, pipeline := range pipelines {
-			if pipeline.State != nil {
-				hasStateInfo = true
-				break
-			}
-		}
-	}
-
 	// ヘッダー
 	if f.showDetails {
 		// 詳細表示モード：すべての項目を表示
-		if hasStateInfo {
+		if f.withState {
 			if _, err := fmt.Fprintln(tw, "ACCOUNT ID\tACCOUNT NAME\tPIPELINE NAME\tPIPELINE TYPE\tTRIGGER\tSTATE\tLAST UPDATED\tLATEST STAGE UPDATE"); err != nil {
 				return err
 			}
@@ -88,7 +77,7 @@ func (f *Formatter) formatTable(pipelines []models.Pipeline, w io.Writer) error 
 		}
 	} else {
 		// シンプル表示モード：ACCOUNT NAMEとPIPELINE NAMEのみ
-		if hasStateInfo {
+		if f.withState {
 			if _, err := fmt.Fprintln(tw, "ACCOUNT NAME\tPIPELINE NAME\tSTATE\tLATEST STAGE UPDATE"); err != nil {
 				return err
 			}
@@ -112,7 +101,7 @@ func (f *Formatter) formatTable(pipelines []models.Pipeline, w io.Writer) error 
 			triggerDetails := getTriggerDetails(pipeline)
 			pipelineType := getPipelineType(pipeline)
 
-			if hasStateInfo {
+			if f.withState {
 				stateInfo := getPipelineStateInfo(pipeline)
 				latestStageUpdate := getLatestStageUpdateTime(pipeline)
 				if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
@@ -141,7 +130,7 @@ func (f *Formatter) formatTable(pipelines []models.Pipeline, w io.Writer) error 
 			}
 		} else {
 			// シンプル表示モード
-			if hasStateInfo {
+			if f.withState {
 				stateInfo := getPipelineStateInfo(pipeline)
 				latestStageUpdate := getLatestStageUpdateTime(pipeline)
 				if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n",
@@ -345,4 +334,12 @@ func FilterPipelinesByAccount(pipelines []models.Pipeline, pattern string) []mod
 	}
 
 	return filtered
+}
+
+// GetCacheStatusColorText returns colored cache status text
+func GetCacheStatusColorText(fromCache bool) string {
+	if fromCache {
+		return Success("Cache")
+	}
+	return Warning("API")
 }

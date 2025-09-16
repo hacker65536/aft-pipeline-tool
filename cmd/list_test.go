@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/hacker65536/aft-pipeline-tool/internal/models"
+	"github.com/hacker65536/aft-pipeline-tool/internal/utils"
 )
 
 func TestSortPipelinesByLatestStageUpdate(t *testing.T) {
@@ -70,7 +71,7 @@ func TestSortPipelinesByLatestStageUpdate(t *testing.T) {
 	}
 
 	// Sort the pipelines
-	sortPipelinesByLatestStageUpdate(pipelines)
+	utils.SortPipelinesByLatestStageUpdate(pipelines)
 
 	// Verify the order: newest first, then middle, then old, then no-state
 	expectedOrder := []string{
@@ -101,7 +102,7 @@ func TestSortPipelinesByLatestStageUpdateAllNil(t *testing.T) {
 	}
 
 	// Sort the pipelines
-	sortPipelinesByLatestStageUpdate(pipelines)
+	utils.SortPipelinesByLatestStageUpdate(pipelines)
 
 	// Verify the order remains the same (stable sort)
 	for i, expected := range originalOrder {

@@ -2,15 +2,15 @@ package models
 
 import "time"
 
-// PipelineCache represents cached pipeline data
-type PipelineCache struct {
-	Pipelines []Pipeline `json:"pipelines"`
-	CachedAt  time.Time  `json:"cached_at"`
-	TTL       int        `json:"ttl"`
+// AccountsCache represents cached accounts list data
+type AccountsCache struct {
+	Accounts []Account `json:"accounts"`
+	CachedAt time.Time `json:"cached_at"`
+	TTL      int       `json:"ttl"`
 }
 
-// PipelineDetailsCache represents cached pipeline details data
-type PipelineDetailsCache struct {
+// PipelinesCache represents cached pipelines list data
+type PipelinesCache struct {
 	Pipelines []Pipeline `json:"pipelines"`
 	CachedAt  time.Time  `json:"cached_at"`
 	TTL       int        `json:"ttl"`
@@ -30,7 +30,33 @@ type PipelineStateCache struct {
 	TTL      int            `json:"ttl"`
 }
 
+// PipelineExecutionsCache represents cached pipeline executions data
+type PipelineExecutionsCache struct {
+	Executions []PipelineExecutionSummary `json:"executions"`
+	CachedAt   time.Time                  `json:"cached_at"`
+	TTL        int                        `json:"ttl"`
+}
+
+// Legacy cache types for backward compatibility
+// Deprecated: Use AccountsCache instead
+type AccountCache = AccountsCache
+
+// Deprecated: Use PipelinesCache instead
+type PipelineCache = PipelinesCache
+
+// Deprecated: Use PipelineExecutionsCache instead
+type PipelineExecutionCache = PipelineExecutionsCache
+
+// PipelineDetailsCache represents cached pipeline details data (legacy)
+// Deprecated: Use PipelineDetailCache for individual pipelines instead
+type PipelineDetailsCache struct {
+	Pipelines []Pipeline `json:"pipelines"`
+	CachedAt  time.Time  `json:"cached_at"`
+	TTL       int        `json:"ttl"`
+}
+
 // SimplePipelineCache represents the legacy simplified pipeline cache format
+// Deprecated: Use PipelineDetailCache instead
 type SimplePipelineCache struct {
 	Pipeline SimplePipeline `json:"pipeline"`
 	CachedAt time.Time      `json:"cached_at"`

@@ -23,8 +23,10 @@ import (
 var (
 	executeCmd = &cobra.Command{
 		Use:   "execute",
-		Short: "Execute pipeline operations",
-		Long:  `Execute various pipeline operations such as starting, stopping, and monitoring executions.`,
+		Short: "List AFT pipelines with execution information (default) or execute pipeline operations",
+		Long: `List all AFT pipelines across accounts and display their current execution status and configurations by default.
+Also provides subcommands for starting, stopping, and monitoring pipeline executions.`,
+		RunE: runExecuteDefault,
 	}
 
 	startCmd = &cobra.Command{
@@ -51,20 +53,19 @@ var (
 		RunE:  runStopPipeline,
 	}
 
-	statusCmd = &cobra.Command{
-		Use:   "status [pipeline-name]",
-		Short: "Show pipeline execution status",
-		Long:  `Show the status of pipeline executions.`,
-		Args:  cobra.MaximumNArgs(1),
-		RunE:  runPipelineStatus,
-	}
-
 	historyCmd = &cobra.Command{
 		Use:   "history [pipeline-name]",
 		Short: "Show pipeline execution history",
 		Long:  `Show the execution history of pipelines.`,
 		Args:  cobra.MaximumNArgs(1),
 		RunE:  runPipelineHistory,
+	}
+
+	executeListCmd = &cobra.Command{
+		Use:   "list",
+		Short: "List AFT pipelines with execution information",
+		Long:  `List all AFT pipelines across accounts and display their current execution status and configurations.`,
+		RunE:  runExecuteList,
 	}
 )
 
@@ -78,6 +79,10 @@ var (
 	showDetails       bool
 	forceExecute      bool
 	executeSequential bool
+	// Execute list command variables
+	executeListFormat        string
+	executeListAccountFilter string
+	executeListShowDetails   bool
 )
 
 func init() {
@@ -85,8 +90,8 @@ func init() {
 	executeCmd.AddCommand(startCmd)
 	executeCmd.AddCommand(startFromFileCmd)
 	executeCmd.AddCommand(stopCmd)
-	executeCmd.AddCommand(statusCmd)
 	executeCmd.AddCommand(historyCmd)
+	executeCmd.AddCommand(executeListCmd)
 
 	// Start command flags
 	startCmd.Flags().BoolVar(&executeAll, "all", false, "Start execution for all AFT pipelines")
@@ -104,12 +109,19 @@ func init() {
 	stopCmd.Flags().StringVar(&stopReason, "reason", "", "Reason for stopping the execution")
 	stopCmd.Flags().StringVar(&executionId, "execution-id", "", "Specific execution ID to stop (if not provided, stops the latest running execution)")
 
-	// Status command flags
-	statusCmd.Flags().BoolVar(&showDetails, "details", false, "Show detailed execution information")
-
 	// History command flags
 	historyCmd.Flags().Int32Var(&maxResults, "max-results", 10, "Maximum number of executions to show (default: 10)")
 	historyCmd.Flags().BoolVar(&showDetails, "details", false, "Show detailed execution information")
+
+	// Execute list command flags
+	executeListCmd.Flags().StringVarP(&executeListFormat, "format", "f", "table", "Output format (table, json, csv)")
+	executeListCmd.Flags().StringVar(&executeListAccountFilter, "account-filter", "", "Filter by account ID pattern")
+	executeListCmd.Flags().BoolVar(&executeListShowDetails, "show-details", false, "Show detailed information (Account ID, Pipeline Type, Trigger, Last Updated)")
+
+	// Execute command flags (for default list behavior)
+	executeCmd.Flags().StringVarP(&executeListFormat, "format", "f", "table", "Output format (table, json, csv)")
+	executeCmd.Flags().StringVar(&executeListAccountFilter, "account-filter", "", "Filter by account ID pattern")
+	executeCmd.Flags().BoolVar(&executeListShowDetails, "show-details", false, "Show detailed information (Account ID, Pipeline Type, Trigger, Last Updated)")
 }
 
 func runStartPipeline(cmd *cobra.Command, args []string) error {
@@ -263,46 +275,6 @@ func runStopPipeline(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runPipelineStatus(cmd *cobra.Command, args []string) error {
-	ctx := context.Background()
-
-	// Create AWS client
-	awsClient, err := aws.NewClient(ctx, viper.GetString("aws.region"), viper.GetString("aws.profile"))
-	if err != nil {
-		return fmt.Errorf("failed to create AWS client: %w", err)
-	}
-
-	if len(args) > 0 {
-		// Show status for specific pipeline
-		pipelineName := args[0]
-		return showPipelineStatus(ctx, awsClient, pipelineName, showDetails)
-	} else {
-		// Show status for all AFT pipelines
-		cfg, err := config.LoadConfig()
-		if err != nil {
-			return fmt.Errorf("failed to load config: %w", err)
-		}
-
-		fileCache := cache.NewFileCache(cfg.Cache.Directory)
-		manager := aft.NewManager(awsClient, fileCache, cfg)
-
-		pipelines, err := manager.GetPipelines(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to get pipelines: %w", err)
-		}
-
-		for _, pipeline := range pipelines {
-			fmt.Printf("\n%s\n", utils.Highlight(pipeline.GetName()))
-			err := showPipelineStatus(ctx, awsClient, pipeline.GetName(), showDetails)
-			if err != nil {
-				fmt.Printf("  %s Failed to get status: %v\n", utils.Error("ERROR"), err)
-			}
-		}
-	}
-
-	return nil
-}
-
 func runPipelineHistory(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 
@@ -402,46 +374,6 @@ func waitForExecutions(ctx context.Context, client *aws.Client, results []Execut
 			}
 		}
 	}
-}
-
-func showPipelineStatus(ctx context.Context, client *aws.Client, pipelineName string, detailed bool) error {
-	// Get latest execution
-	executions, err := client.ListPipelineExecutions(ctx, pipelineName, 1)
-	if err != nil {
-		return fmt.Errorf("failed to list executions: %w", err)
-	}
-
-	if len(executions.PipelineExecutionSummaries) == 0 {
-		fmt.Printf("  %s No executions found\n", utils.Info("INFO"))
-		return nil
-	}
-
-	latest := executions.PipelineExecutionSummaries[0]
-	status := formatExecutionStatus(string(latest.Status))
-
-	fmt.Printf("  Status: %s\n", status)
-	fmt.Printf("  Execution ID: %s\n", *latest.PipelineExecutionId)
-
-	if latest.StartTime != nil {
-		fmt.Printf("  Started: %s\n", latest.StartTime.Format("2006-01-02 15:04:05"))
-	}
-
-	if latest.LastUpdateTime != nil {
-		fmt.Printf("  Last Updated: %s\n", latest.LastUpdateTime.Format("2006-01-02 15:04:05"))
-	}
-
-	if detailed {
-		execution, err := client.GetPipelineExecution(ctx, pipelineName, *latest.PipelineExecutionId)
-		if err != nil {
-			return fmt.Errorf("failed to get execution details: %w", err)
-		}
-
-		if execution.PipelineExecution.StatusSummary != nil && *execution.PipelineExecution.StatusSummary != "" {
-			fmt.Printf("  Summary: %s\n", *execution.PipelineExecution.StatusSummary)
-		}
-	}
-
-	return nil
 }
 
 func showPipelineHistory(ctx context.Context, client *aws.Client, pipelineName string, maxResults int32, detailed bool) error {
@@ -886,4 +818,85 @@ func isPipelineRunning(ctx context.Context, client *aws.Client, pipelineName str
 	}
 
 	return false, "", nil
+}
+
+// runExecuteDefault implements the default behavior for execute command (same as list)
+func runExecuteDefault(cmd *cobra.Command, args []string) error {
+	// Use the same logic as runExecuteList for the default behavior
+	return runExecuteList(cmd, args)
+}
+
+// runExecuteList implements the execute list command with state information always included
+func runExecuteList(cmd *cobra.Command, args []string) error {
+	ctx := context.Background()
+
+	// 設定読み込み
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// AWS クライアント初期化
+	awsClient, err := aws.NewClient(ctx, cfg.AWS.Region, cfg.AWS.Profile)
+	if err != nil {
+		return fmt.Errorf("failed to create AWS client: %w", err)
+	}
+
+	// キャッシュ初期化
+	fileCache := cache.NewFileCache(cfg.Cache.Directory)
+
+	// AFT マネージャー初期化
+	manager := aft.NewManager(awsClient, fileCache, cfg)
+
+	// パイプライン詳細取得（state情報を含む詳細取得を常に実行）
+	var pipelines []models.Pipeline
+	shouldShowState := true
+
+	if debug {
+		// --debug指定時：詳細な進捗表示
+		pipelines, err = manager.GetPipelineDetailsWithStateAndDetailedProgress(ctx)
+	} else {
+		// デフォルト：簡易な進捗表示
+		pipelines, err = manager.GetPipelineDetailsWithStateAndProgress(ctx, true)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to get pipeline details with state: %w", err)
+	}
+
+	// フィルタリング
+	if executeListAccountFilter != "" {
+		pipelines = utils.FilterPipelinesByAccount(pipelines, executeListAccountFilter)
+	}
+
+	// state情報がある場合は、LATEST STAGE UPDATEの新しい順にソート
+	if shouldShowState {
+		utils.SortPipelinesByLatestStageUpdate(pipelines)
+	}
+
+	// 出力フォーマットを設定から取得（フラグで上書き可能）
+	format := executeListFormat
+	if format == "table" && cfg.Output.Format != "" {
+		format = cfg.Output.Format
+	}
+
+	// キャッシュ使用状況を取得
+	cacheUsage := manager.GetCacheUsage()
+
+	// キャッシュディレクトリと使用状況を表示
+	fmt.Printf("%s: %s\n", utils.Info("Cache Directory"), utils.Highlight(cfg.Cache.Directory))
+	fmt.Printf("%s: Accounts=%s, Pipelines=%s, PipelineDetails=%s, PipelineStates=%s\n",
+		utils.Info("Cache Status"),
+		utils.GetCacheStatusColorText(cacheUsage.AccountsFromCache),
+		utils.GetCacheStatusColorText(cacheUsage.PipelinesFromCache),
+		utils.GetCacheStatusColorText(cacheUsage.PipelineDetailsFromCache),
+		utils.GetCacheStatusColorText(cacheUsage.PipelineStatesFromCache))
+	fmt.Println()
+
+	// 出力
+	formatter := utils.NewFormatterWithOptions(format, executeListShowDetails, shouldShowState)
+	if err := formatter.FormatPipelines(pipelines, os.Stdout); err != nil {
+		return fmt.Errorf("failed to format output: %w", err)
+	}
+
+	return nil
 }

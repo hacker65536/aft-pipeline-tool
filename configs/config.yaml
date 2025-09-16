@@ -2,9 +2,11 @@
 
 cache:
   directory: ~/.aft-pipeline-tool/cache
-  accounts_ttl: 3600        # 1 hour
-  pipelines_ttl: 1800       # 30 minutes
-  pipeline_details_ttl: 900 # 15 minutes
+  accounts_ttl: 3600                     # Account information cache TTL (1 hour)
+  pipelines_ttl: 1800                    # Pipeline list cache TTL (30 minutes)
+  pipeline_details_ttl: 900              # Pipeline details cache TTL (15 minutes)
+  pipeline_states_ttl: 300               # Pipeline state cache TTL (5 minutes)
+  pipeline_executions_ttl: 600           # Pipeline execution history cache TTL (10 minutes)
 
 exclude_accounts:
   - "111111111111"  # Management Account
