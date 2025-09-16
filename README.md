@@ -4,7 +4,21 @@ AWS Control Tower Account Factory for Terraform (AFT) のCodePipelineにおけ�
 
 ## 概要
 
-このツールは、AFT管理下の複数アカウントのCodePipelineのGitトリガー設定を一括で確認・編集することができます。
+このツールは、AFT管理下の複数アカウントのCodePipelineを効率的に管理するためのCLIツールです。パイプラインの設定確認・編集から実行管理まで、AFT運用に必要な操作を一元的に行うことができます。
+
+### 主な特徴
+
+- **一括操作**: 複数アカウントのパイプラインを同時に管理
+- **安全な更新**: ドライラン機能による事前確認
+- **柔軟な出力**: テーブル、JSON、CSV形式での結果表示
+- **高速処理**: キャッシュ機能によるパフォーマンス向上
+- **実行管理**: パイプラインの開始・停止・監視機能
+
+### 関連ドキュメント
+
+- **[技術仕様書](docs/spec.md)**: アーキテクチャ、データモデル、セキュリティ考慮事項などの詳細仕様
+- **[GitHub Workflows](docs/github-workflows.md)**: CI/CDワークフローの設定
+- **[ワークフロー最適化](docs/workflow-optimization.md)**: パフォーマンス最適化に関する情報
 
 ## AI開発について
 
@@ -281,37 +295,12 @@ execution:
 
 ## 必要なIAM権限
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "organizations:ListAccounts",
-        "codepipeline:ListPipelines",
-        "codepipeline:GetPipeline",
-        "codepipeline:UpdatePipeline",
-        "codepipeline:StartPipelineExecution",
-        "codepipeline:StopPipelineExecution",
-        "codepipeline:GetPipelineExecution",
-        "codepipeline:ListPipelineExecutions"
-      ],
-      "Resource": "*"
-    }
-  ]
-}
-```
+このツールを使用するには、以下のAWS IAM権限が必要です：
 
-**権限の説明**:
-- `organizations:ListAccounts`: AFT管理下のアカウント一覧取得
-- `codepipeline:ListPipelines`: パイプライン一覧取得
-- `codepipeline:GetPipeline`: パイプライン詳細情報取得
-- `codepipeline:UpdatePipeline`: パイプライン設定更新
-- `codepipeline:StartPipelineExecution`: パイプライン実行開始
-- `codepipeline:StopPipelineExecution`: パイプライン実行停止
-- `codepipeline:GetPipelineExecution`: パイプライン実行詳細取得
-- `codepipeline:ListPipelineExecutions`: パイプライン実行履歴取得
+- Organizations API（アカウント一覧取得）
+- CodePipeline API（パイプライン操作・実行管理）
+
+詳細な権限設定については、[仕様書](docs/spec.md#セキュリティ考慮事項)を参照してください。
 
 ## トラブルシューティング
 
