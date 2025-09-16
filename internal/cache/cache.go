@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/hacker65536/aft-pipeline-tool/internal/logger"
@@ -309,48 +310,70 @@ func (fc *FileCache) SetPipelineExecutions(pipelineName string, executions []mod
 
 // ClearCache removes all cached data
 func (fc *FileCache) ClearCache() error {
-	cacheDir := fc.getCacheDir()
-
-	accountsPath := filepath.Join(cacheDir, "accounts.json")
-	pipelinesPath := filepath.Join(cacheDir, "pipelines.json")
-	pipelineDetailsDirPath := filepath.Join(cacheDir, "pipeline_details")
-	pipelineStatesDirPath := filepath.Join(cacheDir, "pipeline_states")
-	pipelineExecutionsDirPath := filepath.Join(cacheDir, "pipeline_executions")
+	var errors []error
 
 	// Legacy cache directories to clean up (in base directory for backward compatibility)
 	legacyPipelineDetailsPath := filepath.Join(fc.baseDir, "pipeline_details.json")
 	legacyPipelineDetailsWithStateDirPath := filepath.Join(fc.baseDir, "pipeline_details_with_state")
 
-	// Remove files if they exist, ignore errors if files don't exist
-	if err := os.Remove(accountsPath); err != nil && !os.IsNotExist(err) {
-		logger.GetLogger().Debug("Failed to remove accounts cache", zap.Error(err))
-	}
-	if err := os.Remove(pipelinesPath); err != nil && !os.IsNotExist(err) {
-		logger.GetLogger().Debug("Failed to remove pipelines cache", zap.Error(err))
-	}
+	// Remove legacy files first
 	if err := os.Remove(legacyPipelineDetailsPath); err != nil && !os.IsNotExist(err) {
 		logger.GetLogger().Debug("Failed to remove legacy pipeline details cache", zap.Error(err))
+		errors = append(errors, fmt.Errorf("failed to remove legacy pipeline details cache: %w", err))
 	}
-	if err := os.RemoveAll(pipelineDetailsDirPath); err != nil {
-		logger.GetLogger().Debug("Failed to remove pipeline details directory", zap.Error(err))
-	}
-	if err := os.RemoveAll(pipelineStatesDirPath); err != nil {
-		logger.GetLogger().Debug("Failed to remove pipeline states directory", zap.Error(err))
-	}
-	if err := os.RemoveAll(pipelineExecutionsDirPath); err != nil {
-		logger.GetLogger().Debug("Failed to remove pipeline executions directory", zap.Error(err))
-	}
-	if err := os.RemoveAll(legacyPipelineDetailsWithStateDirPath); err != nil {
+	if err := os.RemoveAll(legacyPipelineDetailsWithStateDirPath); err != nil && !os.IsNotExist(err) {
 		logger.GetLogger().Debug("Failed to remove legacy pipeline details with state directory", zap.Error(err))
+		errors = append(errors, fmt.Errorf("failed to remove legacy pipeline details with state directory: %w", err))
 	}
 
-	// If AWS context is available, also remove the entire context-specific directory
-	if fc.awsContext != nil {
-		if err := os.RemoveAll(cacheDir); err != nil {
-			logger.GetLogger().Debug("Failed to remove AWS context cache directory", zap.String("dir", cacheDir), zap.Error(err))
+	// Remove all AWS context-specific directories and files in the base cache directory
+	logger.GetLogger().Debug("Clearing all cache data", zap.String("baseDir", fc.baseDir))
+
+	// Read all entries in the base cache directory
+	entries, err := os.ReadDir(fc.baseDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			logger.GetLogger().Debug("Cache directory does not exist", zap.String("dir", fc.baseDir))
+			return nil // Nothing to clear
+		}
+		logger.GetLogger().Error("Failed to read cache directory", zap.String("dir", fc.baseDir), zap.Error(err))
+		return fmt.Errorf("failed to read cache directory %s: %w", fc.baseDir, err)
+	}
+
+	// Remove all entries in the cache directory
+	for _, entry := range entries {
+		entryPath := filepath.Join(fc.baseDir, entry.Name())
+		logger.GetLogger().Debug("Removing cache entry", zap.String("path", entryPath), zap.Bool("isDir", entry.IsDir()))
+
+		if entry.IsDir() {
+			// Remove directory and all its contents
+			if err := os.RemoveAll(entryPath); err != nil {
+				logger.GetLogger().Error("Failed to remove cache directory", zap.String("path", entryPath), zap.Error(err))
+				errors = append(errors, fmt.Errorf("failed to remove cache directory %s: %w", entryPath, err))
+			} else {
+				logger.GetLogger().Debug("Successfully removed cache directory", zap.String("path", entryPath))
+			}
+		} else {
+			// Remove file
+			if err := os.Remove(entryPath); err != nil {
+				logger.GetLogger().Error("Failed to remove cache file", zap.String("path", entryPath), zap.Error(err))
+				errors = append(errors, fmt.Errorf("failed to remove cache file %s: %w", entryPath, err))
+			} else {
+				logger.GetLogger().Debug("Successfully removed cache file", zap.String("path", entryPath))
+			}
 		}
 	}
 
+	// Return combined errors if any occurred
+	if len(errors) > 0 {
+		var errorMessages []string
+		for _, err := range errors {
+			errorMessages = append(errorMessages, err.Error())
+		}
+		return fmt.Errorf("cache clear encountered errors: %s", strings.Join(errorMessages, "; "))
+	}
+
+	logger.GetLogger().Debug("Cache cleared successfully")
 	return nil
 }
 
