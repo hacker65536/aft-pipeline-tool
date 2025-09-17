@@ -88,15 +88,6 @@ func (fc *FileCache) setCacheItem(filename string, data interface{}) error {
 	return nil
 }
 
-// ensureCacheDir creates cache directory if it doesn't exist and returns the path
-func (fc *FileCache) ensureCacheDir(subDir string) (string, error) {
-	cacheDir := filepath.Join(fc.getCacheDir(), subDir)
-	if err := os.MkdirAll(cacheDir, fc.getConfig().DirPermission); err != nil {
-		return "", &CacheError{Operation: "mkdir", Key: subDir, Err: err}
-	}
-	return cacheDir, nil
-}
-
 // getConfig returns cache configuration (with defaults if not set)
 func (fc *FileCache) getConfig() *CacheConfig {
 	if fc.config == nil {
