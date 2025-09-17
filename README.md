@@ -142,6 +142,67 @@ go build -o aft-pipeline-tool
 ./aft-pipeline-tool fix-pipeline-type --pipeline-type V2
 ```
 
+#### パイプライン状態確認（status）
+
+パイプラインの現在の状態と実行情報を表示します。新しいフィルタリング機能とキャッシュ更新機能を提供します。
+
+```bash
+# 全パイプラインの状態を表示
+./aft-pipeline-tool status
+
+# 特定パイプラインの詳細状態を表示
+./aft-pipeline-tool status "123456789012-customizations-pipeline"
+
+# 詳細実行情報を表示（ステージ別状態含む）
+./aft-pipeline-tool status "123456789012-customizations-pipeline" --details
+
+# 詳細情報を表示（Account ID、Pipeline Type、Trigger、Last Updated）
+./aft-pipeline-tool status --show-details
+
+# 特定の状態でフィルタリング
+./aft-pipeline-tool status --state-filter "succeeded"
+./aft-pipeline-tool status --state-filter "failed"
+./aft-pipeline-tool status --state-filter "inprogress"
+
+# パイプライン名、アカウントID、アカウント名でフィルタリング
+./aft-pipeline-tool status --pipeline-filter "123456789012"
+./aft-pipeline-tool status --pipeline-filter "production"
+./aft-pipeline-tool status --pipeline-filter "customizations"
+
+# アカウントIDパターンでフィルタリング（既存機能）
+./aft-pipeline-tool status --account-filter "123456"
+
+# 全キャッシュを更新してから状態を表示
+./aft-pipeline-tool status --refresh-cache
+
+# 特定パイプラインのキャッシュのみ更新
+./aft-pipeline-tool status "123456789012-customizations-pipeline" --refresh-cache
+
+# フィルターされたパイプラインのキャッシュのみ更新
+./aft-pipeline-tool status --pipeline-filter "production" --refresh-cache
+./aft-pipeline-tool status --pipeline-filter "123456789012" --refresh-cache
+
+# JSON形式で出力
+./aft-pipeline-tool status --format json
+
+# 複数フィルターの組み合わせ
+./aft-pipeline-tool status --state-filter "failed" --pipeline-filter "production" --show-details
+
+# フィルター + キャッシュ更新の組み合わせ
+./aft-pipeline-tool status --pipeline-filter "production" --state-filter "failed" --refresh-cache
+```
+
+**新機能**:
+- **状態フィルタリング**: `--state-filter`で特定の実行状態のパイプラインのみ表示
+  - `succeeded`/`success`: 成功したパイプライン
+  - `failed`/`failure`/`fail`: 失敗したパイプライン
+  - `inprogress`/`in-progress`/`running`: 実行中のパイプライン
+- **柔軟な検索**: `--pipeline-filter`でパイプライン名、アカウントID、アカウント名のいずれでも検索可能
+- **インテリジェントキャッシュ更新**: `--refresh-cache`で最新情報を取得してから表示
+  - パイプライン名指定時: 指定したパイプラインのキャッシュのみ更新
+  - `--pipeline-filter`指定時: フィルターにマッチするパイプラインのキャッシュのみ更新
+  - フィルター未指定時: 全キャッシュを更新
+
 #### パイプライン実行管理（execute）
 
 パイプラインの実行開始、停止、ステータス確認、履歴表示を行います。

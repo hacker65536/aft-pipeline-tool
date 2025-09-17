@@ -31,6 +31,16 @@ type Cache interface {
 	// Cache management
 	ClearCache() error
 	DeletePipelineCache(pipelineName string) error
+
+	// Generic cache operations
+	Get(key string, target interface{}) error
+	Set(key string, data interface{}, ttl int) error
+	Delete(key string) error
+	Exists(key string) bool
+
+	// Batch operations
+	GetMultiple(keys []string) (map[string]interface{}, error)
+	SetMultiple(items map[string]interface{}, ttl int) error
 }
 
 // CacheItem represents a generic cache item with TTL

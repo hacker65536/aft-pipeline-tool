@@ -18,6 +18,7 @@ import (
 type FileCache struct {
 	baseDir    string
 	awsContext *AWSContext
+	config     *CacheConfig
 }
 
 // NewFileCache creates a new file cache instance
@@ -50,6 +51,11 @@ func (fc *FileCache) getCacheDir() string {
 	return filepath.Join(fc.baseDir, fc.awsContext.GetCacheSubDirectory())
 }
 
+// GetCacheDir returns the cache directory (public method for external access)
+func (fc *FileCache) GetCacheDir() string {
+	return fc.getCacheDir()
+}
+
 // CacheResult represents the result of a cache operation
 type CacheResult struct {
 	Data      interface{}
@@ -58,27 +64,15 @@ type CacheResult struct {
 
 // GetAccounts retrieves cached account data
 func (fc *FileCache) GetAccounts() (*models.AccountsCache, error) {
-	cacheDir := fc.getCacheDir()
-	cachePath := filepath.Join(cacheDir, "accounts.json")
-
-	data, err := os.ReadFile(cachePath)
-	if err != nil {
-		logger.GetLogger().Debug("Failed to read cache file", zap.String("path", cachePath), zap.Error(err))
-		return nil, err
-	}
-
 	var cache models.AccountsCache
-	if err := json.Unmarshal(data, &cache); err != nil {
-		logger.GetLogger().Debug("Failed to unmarshal cache data", zap.Error(err))
+	if err := fc.getCacheItem("accounts.json", &cache); err != nil {
 		return nil, err
 	}
 
 	// TTLチェック
-	elapsed := time.Since(cache.CachedAt).Seconds()
-	logger.GetLogger().Debug("Cache TTL check", zap.Float64("elapsed", elapsed), zap.Int("ttl", cache.TTL))
-	if elapsed > float64(cache.TTL) {
+	if err := checkTTL(cache.CachedAt, cache.TTL); err != nil {
 		logger.GetLogger().Debug("Cache expired")
-		return nil, fmt.Errorf("cache expired")
+		return nil, err
 	}
 
 	logger.GetLogger().Debug("Cache hit - returning accounts", zap.Int("count", len(cache.Accounts)))
@@ -93,18 +87,7 @@ func (fc *FileCache) SetAccounts(accounts []models.Account, ttl int) error {
 		TTL:      ttl,
 	}
 
-	data, err := json.MarshalIndent(cache, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	cacheDir := fc.getCacheDir()
-	cachePath := filepath.Join(cacheDir, "accounts.json")
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
-		return err
-	}
-
-	return os.WriteFile(cachePath, data, 0644)
+	return fc.setCacheItem("accounts.json", cache)
 }
 
 // GetPipelines retrieves cached pipeline data
@@ -450,107 +433,80 @@ func (fc *FileCache) removePipelineFromPipelinesCache(pipelineName string) error
 	return os.WriteFile(cachePath, updatedData, 0644)
 }
 
-// Legacy methods for backward compatibility - these will be deprecated
+// Generic cache operations implementation
 
-// GetPipelineDetails retrieves cached pipeline details data (legacy)
-// Deprecated: Use GetPipelineDetail for individual pipelines instead
-func (fc *FileCache) GetPipelineDetails() (*models.PipelineDetailsCache, error) {
-	cachePath := filepath.Join(fc.baseDir, "pipeline_details.json")
-
-	data, err := os.ReadFile(cachePath)
-	if err != nil {
-		logger.GetLogger().Debug("Failed to read pipeline details cache file", zap.String("path", cachePath), zap.Error(err))
-		return nil, err
-	}
-
-	var cache models.PipelineDetailsCache
-	if err := json.Unmarshal(data, &cache); err != nil {
-		logger.GetLogger().Debug("Failed to unmarshal pipeline details cache data", zap.Error(err))
-		return nil, err
-	}
-
-	// TTLチェック
-	elapsed := time.Since(cache.CachedAt).Seconds()
-	logger.GetLogger().Debug("Pipeline details cache TTL check", zap.Float64("elapsed", elapsed), zap.Int("ttl", cache.TTL))
-	if elapsed > float64(cache.TTL) {
-		logger.GetLogger().Debug("Pipeline details cache expired")
-		return nil, fmt.Errorf("cache expired")
-	}
-
-	logger.GetLogger().Debug("Pipeline details cache hit - returning pipelines", zap.Int("count", len(cache.Pipelines)))
-	return &cache, nil
+// Get retrieves cache data for a given key
+func (fc *FileCache) Get(key string, target interface{}) error {
+	return fc.getCacheItem(key, target)
 }
 
-// SetPipelineDetails stores pipeline details data in cache (legacy)
-// Deprecated: Use SetPipelineDetail for individual pipelines instead
-func (fc *FileCache) SetPipelineDetails(pipelines []models.Pipeline, ttl int) error {
-	cache := models.PipelineDetailsCache{
-		Pipelines: pipelines,
-		CachedAt:  time.Now(),
-		TTL:       ttl,
-	}
-
-	data, err := json.MarshalIndent(cache, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	cachePath := filepath.Join(fc.baseDir, "pipeline_details.json")
-	if err := os.MkdirAll(fc.baseDir, 0755); err != nil {
-		return err
-	}
-
-	return os.WriteFile(cachePath, data, 0644)
+// Set stores cache data for a given key
+func (fc *FileCache) Set(key string, data interface{}, ttl int) error {
+	cacheItem := NewCacheItem(data, ttl)
+	return fc.setCacheItem(key, cacheItem)
 }
 
-// GetPipelineDetailWithState retrieves cached individual pipeline detail data with state information (legacy)
-// Deprecated: Use GetPipelineDetail and GetPipelineState separately instead
-func (fc *FileCache) GetPipelineDetailWithState(pipelineName string) (*models.PipelineDetailCache, error) {
-	cachePath := filepath.Join(fc.baseDir, "pipeline_details_with_state", fmt.Sprintf("%s.json", pipelineName))
+// Delete removes cache data for a given key
+func (fc *FileCache) Delete(key string) error {
+	cacheDir := fc.getCacheDir()
+	cachePath := filepath.Join(cacheDir, key)
 
-	data, err := os.ReadFile(cachePath)
-	if err != nil {
-		logger.GetLogger().Debug("Failed to read pipeline detail with state cache file", zap.String("path", cachePath), zap.Error(err))
-		return nil, err
+	if err := os.Remove(cachePath); err != nil && !os.IsNotExist(err) {
+		return &CacheError{Operation: "delete", Key: key, Err: err}
 	}
 
-	var cache models.PipelineDetailCache
-	if err := json.Unmarshal(data, &cache); err != nil {
-		logger.GetLogger().Debug("Failed to unmarshal pipeline detail with state cache data", zap.Error(err))
-		return nil, err
-	}
-
-	// TTLチェック
-	elapsed := time.Since(cache.CachedAt).Seconds()
-	logger.GetLogger().Debug("Pipeline detail with state cache TTL check", zap.Float64("elapsed", elapsed), zap.Int("ttl", cache.TTL), zap.String("pipeline", pipelineName))
-	if elapsed > float64(cache.TTL) {
-		logger.GetLogger().Debug("Pipeline detail with state cache expired", zap.String("pipeline", pipelineName))
-		return nil, fmt.Errorf("cache expired")
-	}
-
-	logger.GetLogger().Debug("Pipeline detail with state cache hit", zap.String("pipeline", pipelineName))
-	return &cache, nil
+	return nil
 }
 
-// SetPipelineDetailWithState stores individual pipeline detail data with state information in cache (legacy)
-// Deprecated: Use SetPipelineDetail and SetPipelineState separately instead
-func (fc *FileCache) SetPipelineDetailWithState(pipeline models.Pipeline, ttl int) error {
-	cache := models.PipelineDetailCache{
-		Pipeline: pipeline,
-		CachedAt: time.Now(),
-		TTL:      ttl,
+// Exists checks if cache data exists for a given key
+func (fc *FileCache) Exists(key string) bool {
+	cacheDir := fc.getCacheDir()
+	cachePath := filepath.Join(cacheDir, key)
+
+	if _, err := os.Stat(cachePath); err != nil {
+		return false
 	}
 
-	data, err := json.MarshalIndent(cache, "", "  ")
-	if err != nil {
-		return err
+	return true
+}
+
+// GetMultiple retrieves multiple cache items
+func (fc *FileCache) GetMultiple(keys []string) (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+
+	for _, key := range keys {
+		var item CacheItem
+		if err := fc.getCacheItem(key, &item); err != nil {
+			// Skip missing items, don't return error
+			continue
+		}
+
+		// Check TTL
+		if !item.IsExpired() {
+			result[key] = item.Data
+		}
 	}
 
-	cacheDir := filepath.Join(fc.baseDir, "pipeline_details_with_state")
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
-		return err
+	return result, nil
+}
+
+// SetMultiple stores multiple cache items
+func (fc *FileCache) SetMultiple(items map[string]interface{}, ttl int) error {
+	var errors []error
+
+	for key, data := range items {
+		if err := fc.Set(key, data, ttl); err != nil {
+			errors = append(errors, fmt.Errorf("failed to set %s: %w", key, err))
+		}
 	}
 
-	cachePath := filepath.Join(cacheDir, fmt.Sprintf("%s.json", pipeline.GetName()))
-	return os.WriteFile(cachePath, data, 0644)
+	if len(errors) > 0 {
+		var errorMessages []string
+		for _, err := range errors {
+			errorMessages = append(errorMessages, err.Error())
+		}
+		return fmt.Errorf("batch set encountered errors: %s", strings.Join(errorMessages, "; "))
+	}
+
+	return nil
 }

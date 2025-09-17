@@ -111,7 +111,7 @@ func (f *Formatter) formatTable(pipelines []models.Pipeline, w io.Writer) error 
 					pipelineType,
 					triggerDetails,
 					stateInfo,
-					pipeline.GetUpdated().Format("2006-01-02 15:04"),
+					pipeline.GetUpdated().Local().Format("2006-01-02 15:04-0700"),
 					latestStageUpdate,
 				); err != nil {
 					return err
@@ -123,7 +123,7 @@ func (f *Formatter) formatTable(pipelines []models.Pipeline, w io.Writer) error 
 					pipeline.GetName(),
 					pipelineType,
 					triggerDetails,
-					pipeline.GetUpdated().Format("2006-01-02 15:04"),
+					pipeline.GetUpdated().Local().Format("2006-01-02 15:04-0700"),
 				); err != nil {
 					return err
 				}
@@ -185,7 +185,7 @@ func (f *Formatter) formatCSV(pipelines []models.Pipeline, w io.Writer) error {
 			pipeline.GetName(),
 			pipelineType,
 			triggerDetails,
-			pipeline.GetUpdated().Format("2006-01-02 15:04:05"),
+			pipeline.GetUpdated().Local().Format("2006-01-02 15:04:05-0700"),
 		}
 
 		if err := writer.Write(record); err != nil {
@@ -276,48 +276,70 @@ func getPipelineStateInfo(pipeline models.Pipeline) string {
 		return "No state"
 	}
 
-	// 各ステージの状態を確認
-	var failedStageIndexes []string
-	allSucceeded := true
-	hasStages := false
-
-	for i, stage := range pipeline.State.StageStates {
-		hasStages = true
-		if stage.LatestExecution != nil {
-			status := stage.LatestExecution.Status
-			// すべてのステージがSucceededかどうかをチェック
-			if status != "Succeeded" {
-				allSucceeded = false
-				// 失敗したステージのインデックス（1ベース）を記録
-				failedStageIndexes = append(failedStageIndexes, fmt.Sprintf("%d", i+1))
-			}
-		} else {
-			allSucceeded = false
-			// 実行情報がないステージのインデックス（1ベース）を記録
-			failedStageIndexes = append(failedStageIndexes, fmt.Sprintf("%d", i+1))
-		}
-	}
-
-	if !hasStages {
+	if len(pipeline.State.StageStates) == 0 {
 		return "No stages"
 	}
 
-	// すべてのステージがSucceededの場合は"Succeeded"を表示
-	if allSucceeded {
+	// 各ステージの状態を確認し、最初にSucceededではないものを見つける
+	for i, stage := range pipeline.State.StageStates {
+		if stage.LatestExecution != nil {
+			status := stage.LatestExecution.Status
+			if status != "Succeeded" {
+				// 最初にSucceededではないステージのindex番号とstatusを表示
+				return fmt.Sprintf("%d:%s", i, status)
+			}
+		} else {
+			// 実行情報がない場合も最初の非Succeededとして扱う
+			return fmt.Sprintf("%d:NoExecution", i)
+		}
+	}
+
+	// すべてのステージがSucceededの場合、pipelineExecutionIdが全て同じかチェック
+	var pipelineExecutionId string
+	allSamePipelineExecutionId := true
+
+	for i, stage := range pipeline.State.StageStates {
+		if stage.LatestExecution != nil {
+			if i == 0 {
+				pipelineExecutionId = stage.LatestExecution.PipelineExecutionId
+			} else if stage.LatestExecution.PipelineExecutionId != pipelineExecutionId {
+				allSamePipelineExecutionId = false
+				break
+			}
+		} else {
+			allSamePipelineExecutionId = false
+			break
+		}
+	}
+
+	// すべてのステージがSucceededかつpipelineExecutionIdが全て同じ場合
+	if allSamePipelineExecutionId {
 		return "Succeeded"
 	}
 
-	// 失敗したステージのインデックスを表示
-	return strings.Join(failedStageIndexes, ",")
+	// pipelineExecutionIdが異なる場合は、最初の異なるステージの情報を表示
+	for i, stage := range pipeline.State.StageStates {
+		if stage.LatestExecution != nil {
+			if i == 0 {
+				pipelineExecutionId = stage.LatestExecution.PipelineExecutionId
+			} else if stage.LatestExecution.PipelineExecutionId != pipelineExecutionId {
+				return fmt.Sprintf("%d:DiffExecId", i)
+			}
+		}
+	}
+
+	return "Succeeded"
 }
 
-// getLatestStageUpdateTime returns the latest stage update time formatted as string
+// getLatestStageUpdateTime returns the latest stage update time formatted as string in local timezone with timezone offset
 func getLatestStageUpdateTime(pipeline models.Pipeline) string {
 	latestTime := pipeline.GetLatestStageUpdateTime()
 	if latestTime == nil {
 		return "N/A"
 	}
-	return latestTime.Format("2006-01-02 15:04")
+	// Convert to local timezone before formatting with timezone offset (ISO8601-like)
+	localTime := latestTime.Local()
+	return localTime.Format("2006-01-02 15:04-0700")
 }
 
 // FilterPipelinesByAccount filters pipelines by account ID pattern
@@ -334,6 +356,100 @@ func FilterPipelinesByAccount(pipelines []models.Pipeline, pattern string) []mod
 	}
 
 	return filtered
+}
+
+// FilterPipelinesByNameAccountIDOrName filters pipelines by pipeline name, account ID, or account name
+func FilterPipelinesByNameAccountIDOrName(pipelines []models.Pipeline, pattern string) []models.Pipeline {
+	if pattern == "" {
+		return pipelines
+	}
+
+	var filtered []models.Pipeline
+	lowerPattern := strings.ToLower(pattern)
+
+	for _, pipeline := range pipelines {
+		// Check pipeline name
+		if strings.Contains(strings.ToLower(pipeline.GetName()), lowerPattern) {
+			filtered = append(filtered, pipeline)
+			continue
+		}
+
+		// Check account ID
+		if strings.Contains(strings.ToLower(pipeline.AccountID), lowerPattern) {
+			filtered = append(filtered, pipeline)
+			continue
+		}
+
+		// Check account name
+		if strings.Contains(strings.ToLower(pipeline.AccountName), lowerPattern) {
+			filtered = append(filtered, pipeline)
+			continue
+		}
+	}
+
+	return filtered
+}
+
+// FilterPipelinesByState filters pipelines by their current state
+func FilterPipelinesByState(pipelines []models.Pipeline, stateFilter string) []models.Pipeline {
+	if stateFilter == "" {
+		return pipelines
+	}
+
+	var filtered []models.Pipeline
+	lowerStateFilter := strings.ToLower(stateFilter)
+
+	for _, pipeline := range pipelines {
+		pipelineState := getPipelineStateInfo(pipeline)
+		actualStatus := getActualPipelineStatus(pipeline)
+
+		// Handle different state representations
+		switch lowerStateFilter {
+		case "succeeded", "success":
+			if pipelineState == "Succeeded" {
+				filtered = append(filtered, pipeline)
+			}
+		case "failed", "failure", "fail":
+			// Check for actual failed status
+			if actualStatus == "Failed" || strings.Contains(actualStatus, "Failed") {
+				filtered = append(filtered, pipeline)
+			}
+		case "inprogress", "in-progress", "running":
+			// Check for actual in-progress status
+			if actualStatus == "InProgress" || strings.Contains(actualStatus, "InProgress") {
+				filtered = append(filtered, pipeline)
+			}
+		default:
+			// Direct string match for custom states
+			if strings.Contains(strings.ToLower(pipelineState), lowerStateFilter) ||
+				strings.Contains(strings.ToLower(actualStatus), lowerStateFilter) {
+				filtered = append(filtered, pipeline)
+			}
+		}
+	}
+
+	return filtered
+}
+
+// getActualPipelineStatus returns the actual pipeline execution status
+func getActualPipelineStatus(pipeline models.Pipeline) string {
+	if pipeline.State == nil || len(pipeline.State.StageStates) == 0 {
+		return "No state"
+	}
+
+	// Check the latest execution status from stages
+	for _, stage := range pipeline.State.StageStates {
+		if stage.LatestExecution != nil {
+			status := stage.LatestExecution.Status
+			// Return the first non-Succeeded status found
+			if status != "Succeeded" {
+				return status
+			}
+		}
+	}
+
+	// If all stages are succeeded, return "Succeeded"
+	return "Succeeded"
 }
 
 // GetCacheStatusColorText returns colored cache status text
