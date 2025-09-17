@@ -19,11 +19,12 @@ builds:
   - env:
       - CGO_ENABLED=0
     goos:
-      - linux
-      - windows
+      # Temporarily commented out for beta version to speed up CI - only building for Mac ARM
+      # - linux
+      # - windows
       - darwin
     goarch:
-      - amd64
+      # - amd64
       - arm64
     ldflags:
       - -s -w
