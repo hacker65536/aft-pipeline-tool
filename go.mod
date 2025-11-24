@@ -6,9 +6,10 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.31.8
 	github.com/aws/aws-sdk-go-v2/service/codepipeline v1.46.4
 	github.com/aws/aws-sdk-go-v2/service/organizations v1.45.1
+	github.com/aws/aws-sdk-go-v2/service/sts v1.38.4
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/viper v1.21.0
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.27.1
 )
 
 require (
@@ -22,7 +23,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.29.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.34.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.38.4 // indirect
 	github.com/aws/smithy-go v1.23.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
